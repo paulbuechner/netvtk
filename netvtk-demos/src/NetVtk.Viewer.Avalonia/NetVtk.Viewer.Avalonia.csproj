@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>The Avalonia 12 viewer: VtkViewer in a NativeControlHost (Windows, Linux on X11), simulation results with a field, a scalar bar, a cut plane, contours and a warp.</Description>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>NetVtk.Viewer.Avalonia</RootNamespace>
+    <AssemblyName>NetVtk.Viewer.Avalonia</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetVtk.Viewer\NetVtk.Viewer.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:NetVtk.Viewer.Avalonia"
+        x:Class="NetVtk.Viewer.Avalonia.MainWindow"
+        Title="NetVtk Viewer (Avalonia)" Width="1100" Height="750">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
+      <Button x:Name="OpenButton" Content="Open..." Click="Open_Click" />
+      <Button x:Name="SampleButton" Content="Sample" Click="Sample_Click" />
+      <TextBlock Text="Field" VerticalAlignment="Center" Margin="8,0,0,0" />
+      <ComboBox x:Name="Fields" Width="240" IsEnabled="False" SelectionChanged="Fields_SelectionChanged" />
+      <CheckBox x:Name="Warp" Content="Warp" IsEnabled="False" IsCheckedChanged="Toggle_Changed" />
+      <Slider x:Name="WarpScale" Width="110" Minimum="0" Maximum="3" Value="1" IsEnabled="False"
+              VerticalAlignment="Center" ToolTip.Tip="Times the scale that moves the largest displacement a tenth of the size"
+              ValueChanged="Slider_Changed" />
+      <CheckBox x:Name="Cut" Content="Cut" IsEnabled="False" IsCheckedChanged="Toggle_Changed" />
+      <Slider x:Name="CutPosition" Width="110" Minimum="0" Maximum="1" Value="0.5" IsEnabled="False"
+              VerticalAlignment="Center" ToolTip.Tip="Where the plane cuts the longest axis" ValueChanged="Slider_Changed" />
+      <CheckBox x:Name="Contours" Content="Contours" IsEnabled="False" IsCheckedChanged="Toggle_Changed" />
+    </StackPanel>
+    <TextBlock x:Name="Status" DockPanel.Dock="Bottom" Margin="8,4" />
+    <local:ViewerHost x:Name="Host" />
+  </DockPanel>
+</Window>

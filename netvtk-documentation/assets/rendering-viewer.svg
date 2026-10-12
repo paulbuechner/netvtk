@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 476" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="rendering-viewer-title rendering-viewer-desc" width="800" height="476">
+        <title id="rendering-viewer-title">A VTK view in an application's window</title>
+        <desc id="rendering-viewer-desc">The UI framework's host (WPF's HwndHost, Avalonia's NativeControlHost) holds a child window; vtkRenderWindow draws into it, holding a vtkRenderer with actors and a camera; the window's messages go through C# to the render window (size, paint) and to a vtkGenericRenderWindowInteractor (mouse, size), whose vtkInteractorStyleTrackballCamera moves the camera and renders again.</desc>
+        <defs><style>@font-face{font-family:'Geist';font-weight:600;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}
+@font-face{font-family:'Geist Mono';font-weight:400;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}</style><clipPath id="netvtk-card"><rect width="800" height="476" rx="12"/></clipPath>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        </defs><g clip-path="url(#netvtk-card)">
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- Zone first: the UI framework's host control. -->
+        <rect x="40" y="40" width="720" height="100" rx="8" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.12)"/>
+        <text x="60" y="60" fill="#5a6580" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">UI FRAMEWORK'S HOST</text>
+        <text x="192" y="60" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">WPF HwndHost · Avalonia NativeControlHost</text>
+
+        <!-- Containers before the connectors, which cross their borders: render window > renderer, interactor. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="40" y="196" width="312" height="216" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="196" y="220" fill="#2d3142" font-size="12" font-weight="600">vtkRenderWindow</text>
+          <text x="196" y="236" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">draws with OpenGL</text>
+
+          <rect x="56" y="260" width="280" height="136" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="196" y="284" fill="#2d3142" font-size="12" font-weight="600">vtkRenderer</text>
+          <text x="196" y="300" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">AddActor(), GetActiveCamera()</text>
+
+          <rect x="448" y="288" width="312" height="108" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="604" y="312" fill="#2d3142" font-size="12" font-weight="600">vtkGenericRenderWindowInteractor</text>
+        </g>
+
+        <!-- Connectors. -->
+        <g fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)">
+          <path d="M196,196 V126"/>
+          <path d="M604,124 V194"/>
+          <path d="M448,222 H354"/>
+          <path d="M604,248 V286"/>
+          <path d="M464,354 H322"/>
+        </g>
+
+        <!-- Labels: beside the vertical segments, above the horizontal ones, in open canvas. -->
+        <g fill="#f5f5f5">
+          <rect x="204" y="162" width="64" height="12" rx="2"/>
+          <rect x="612" y="162" width="52" height="12" rx="2"/>
+          <rect x="366" y="202" width="68" height="12" rx="2"/>
+          <rect x="612" y="262" width="68" height="12" rx="2"/>
+          <rect x="360" y="322" width="80" height="24" rx="2"/>
+        </g>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#5a6580" letter-spacing="0.06em">
+          <text x="208" y="171">DRAWS INTO</text>
+          <text x="616" y="171">MESSAGES</text>
+          <text x="400" y="211" text-anchor="middle">SIZE, PAINT</text>
+          <text x="616" y="271">MOUSE, SIZE</text>
+          <text x="400" y="331" text-anchor="middle">MOVES IT,</text>
+          <text x="400" y="342" text-anchor="middle">RENDERS AGAIN</text>
+        </g>
+
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <!-- The child window (focal): where VTK draws and the messages come from. -->
+          <rect x="64" y="72" width="672" height="52" rx="6" fill="#f5f5f5"/>
+          <rect x="64" y="72" width="672" height="52" rx="6" fill="rgba(191,69,32,0.08)" stroke="#bf4520"/>
+          <text x="400" y="94" fill="#2d3142" font-size="12" font-weight="600">child window</text>
+          <text x="400" y="110" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">Windows: the application's, its class with CS_OWNDC · Linux: an X11 child VTK creates</text>
+
+          <!-- The application's C#: its procedure passes the messages on. -->
+          <rect x="448" y="196" width="312" height="52" rx="6" fill="#f5f5f5"/>
+          <rect x="448" y="196" width="312" height="52" rx="6" fill="rgba(79,93,117,0.10)" stroke="#5a6580"/>
+          <text x="604" y="218" fill="#2d3142" font-size="12" font-weight="600">window procedure, in C#</text>
+          <text x="604" y="234" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">Linux: X events, read on a UI timer</text>
+
+          <!-- What the renderer holds. -->
+          <rect x="72" y="328" width="116" height="52" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="130" y="350" fill="#2d3142" font-size="12" font-weight="600">actors</text>
+          <text x="130" y="366" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkActor</text>
+          <rect x="204" y="328" width="116" height="52" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="262" y="350" fill="#2d3142" font-size="12" font-weight="600">camera</text>
+          <text x="262" y="366" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkCamera</text>
+
+          <!-- The interactor's style. -->
+          <rect x="464" y="328" width="280" height="52" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="604" y="350" fill="#2d3142" font-size="12" font-weight="600">vtkInteractorStyleTrackballCamera</text>
+          <text x="604" y="366" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">rotate, pan, zoom</text>
+        </g>
+
+        <text x="40" y="444" fill="#5a6580" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">VTK'S OWN WINDOW PROCEDURE STAYS OUT: THE MESSAGES GO THROUGH C#</text>
+      </g></svg>

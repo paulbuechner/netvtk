@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NetVtk.Viewer/NetVtk.Viewer.csproj" />
+    <Project Path="src/NetVtk.Viewer.Avalonia/NetVtk.Viewer.Avalonia.csproj" />
+    <Project Path="src/NetVtk.Viewer.Wpf/NetVtk.Viewer.Wpf.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/NetVtk.Viewer.Tests/NetVtk.Viewer.Tests.csproj" />
+  </Folder>
+</Solution>

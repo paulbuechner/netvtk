@@ -1,0 +1,3 @@
+header vtkWin32DemoWindow.h: exclude_headers (one platform's)
+vtkDemoSource::GetState: template vtkdemojson_basic<double> is not wrapped
+vtkDemoSource::Render: a static overload takes the object and the same arguments, which SWIG's wrappers can't tell apart

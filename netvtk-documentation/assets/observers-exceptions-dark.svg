@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 632" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="observers-exceptions-title observers-exceptions-desc" width="800" height="632">
+        <title id="observers-exceptions-title">A handler's exception comes back from the call</title>
+        <desc id="observers-exceptions-desc">array.Modified() goes through the wrapped call into VTK, which invokes ModifiedEvent; SWIG's director calls the C# handler, which throws; the callback catches and parks the exception and returns, VTK goes on and returns, and the wrapped call throws a VtkException whose InnerException is the handler's.</desc>
+        <defs><style>@font-face{font-family:'Geist';font-weight:600;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}
+@font-face{font-family:'Geist Mono';font-weight:400;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}</style><clipPath id="netvtk-card"><rect width="800" height="632" rx="12"/></clipPath>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6a6a6"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f08a59"/></marker>
+        </defs><g clip-path="url(#netvtk-card)">
+        <rect width="100%" height="100%" fill="#171717"/>
+
+        <!-- Lifelines: your code 96, wrapped call 296, VTK 436, callback 576, your handler 704. -->
+        <g stroke="rgba(230,230,230,0.30)" stroke-width="1" stroke-dasharray="3,3">
+          <line x1="96" y1="96" x2="96" y2="560"/>
+          <line x1="296" y1="96" x2="296" y2="560"/>
+          <line x1="436" y1="96" x2="436" y2="560"/>
+          <line x1="576" y1="96" x2="576" y2="560"/>
+          <line x1="704" y1="96" x2="704" y2="560"/>
+        </g>
+
+        <!-- Activation bars. -->
+        <g fill="#171717">
+          <rect x="292" y="144" width="8" height="392"/>
+          <rect x="432" y="192" width="8" height="264"/>
+          <rect x="572" y="240" width="8" height="176"/>
+          <rect x="700" y="280" width="8" height="40"/>
+        </g>
+        <g fill="rgba(230,230,230,0.12)" stroke="#a6a6a6" stroke-width="0.8">
+          <rect x="292" y="144" width="8" height="392"/>
+          <rect x="432" y="192" width="8" height="264"/>
+          <rect x="572" y="240" width="8" height="176"/>
+          <rect x="700" y="280" width="8" height="40"/>
+        </g>
+
+        <!-- Calls solid, returns and throws dashed; the throw that reaches your code is accent. -->
+        <g fill="none" stroke-width="1.2">
+          <path d="M96,144 H290" stroke="#a6a6a6" marker-end="url(#arrow)"/>
+          <path d="M300,192 H430" stroke="#a6a6a6" marker-end="url(#arrow)"/>
+          <path d="M440,240 H570" stroke="#a6a6a6" marker-end="url(#arrow)"/>
+          <path d="M580,280 H698" stroke="#a6a6a6" marker-end="url(#arrow)"/>
+          <path d="M700,320 H582" stroke="#a6a6a6" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+          <path d="M580,344 H596 Q604,344 604,352 V360 Q604,368 596,368 H582" stroke="#a6a6a6" marker-end="url(#arrow)"/>
+          <path d="M572,416 H442" stroke="#a6a6a6" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+          <path d="M432,456 H302" stroke="#a6a6a6" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+          <path d="M292,536 H98" stroke="#f08a59" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-accent)"/>
+        </g>
+
+        <!-- Message labels on paper masks: code verbatim, prose in caps. -->
+        <g fill="#171717">
+          <rect x="144" y="124" width="100" height="12" rx="2"/>
+          <rect x="334" y="172" width="64" height="12" rx="2"/>
+          <rect x="464" y="208" width="84" height="24" rx="2"/>
+          <rect x="602" y="260" width="76" height="12" rx="2"/>
+          <rect x="618" y="300" width="44" height="12" rx="2"/>
+          <rect x="612" y="350" width="84" height="12" rx="2"/>
+          <rect x="470" y="384" width="72" height="24" rx="2"/>
+          <rect x="108" y="492" width="172" height="36" rx="2"/>
+        </g>
+        <g font-family="'Geist Mono', monospace" font-size="9" fill="#a6a6a6" text-anchor="middle">
+          <text x="194" y="133">array.Modified()</text>
+          <text x="366" y="181">Modified()</text>
+          <text x="506" y="228">ModifiedEvent</text>
+          <text x="640" y="269">Execute(...)</text>
+          <text x="194" y="513" fill="#f08a59">VtkException</text>
+          <text x="194" y="525">InnerException: the handler's</text>
+        </g>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#8c8c8c" letter-spacing="0.06em" text-anchor="middle">
+          <text x="506" y="217">INVOKES</text>
+          <text x="640" y="309">THROWS</text>
+          <text x="616" y="359" text-anchor="start">CATCHES, PARKS</text>
+          <text x="506" y="393">RETURNS,</text>
+          <text x="506" y="404">VTK GOES ON</text>
+          <text x="194" y="501" fill="#f08a59">THROWS</text>
+        </g>
+
+        <!-- Participants; the callback, where the exception stops, is focal. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="40" y="40" width="112" height="56" rx="6" fill="#171717"/>
+          <rect x="40" y="40" width="112" height="56" rx="6" fill="rgba(166,166,166,0.18)" stroke="#8c8c8c"/>
+          <text x="96" y="64" fill="#e6e6e6" font-size="12" font-weight="600">your code</text>
+          <text x="96" y="80" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">application · C#</text>
+
+          <rect x="236" y="40" width="120" height="56" rx="6" fill="#1f1f1f" stroke="#e6e6e6"/>
+          <text x="296" y="64" fill="#e6e6e6" font-size="12" font-weight="600">wrapped call</text>
+          <text x="296" y="80" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">NetVtk · C#, C++</text>
+
+          <rect x="384" y="40" width="104" height="56" rx="6" fill="#171717"/>
+          <rect x="384" y="40" width="104" height="56" rx="6" fill="rgba(230,230,230,0.06)" stroke="rgba(230,230,230,0.38)"/>
+          <text x="436" y="64" fill="#e6e6e6" font-size="12" font-weight="600">VTK</text>
+          <text x="436" y="80" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">vtkObject · C++</text>
+
+          <rect x="516" y="40" width="120" height="56" rx="6" fill="#171717"/>
+          <rect x="516" y="40" width="120" height="56" rx="6" fill="rgba(240,138,89,0.13)" stroke="#f08a59"/>
+          <text x="576" y="64" fill="#e6e6e6" font-size="12" font-weight="600">callback</text>
+          <text x="576" y="80" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">SWIG's director</text>
+
+          <rect x="648" y="40" width="112" height="56" rx="6" fill="#171717"/>
+          <rect x="648" y="40" width="112" height="56" rx="6" fill="rgba(166,166,166,0.18)" stroke="#8c8c8c"/>
+          <text x="704" y="64" fill="#e6e6e6" font-size="12" font-weight="600">your handler</text>
+          <text x="704" y="80" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">observer · C#</text>
+        </g>
+
+        <text x="40" y="592" fill="#8c8c8c" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">PARKED: THE EXCEPTION IN C#, ITS NUMBER IN NETVTKRUNTIME, PER THREAD, UNTIL THE WRAPPED CALL RETURNS</text>
+      </g></svg>

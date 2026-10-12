@@ -1,0 +1,14 @@
+NetVtk (netvtk-core) uses the Visualization Toolkit (VTK).
+
+NetVtk is not affiliated with, endorsed by, or sponsored by Kitware, Inc., which develops VTK.
+
+License terms
+-------------
+- NetVtk source code (this repository): MIT, see LICENSE.
+- The NetVtk native libraries (compiled SWIG wrappers, NetVtkRuntime): MIT. They are compiled with VTK's header
+  files, under VTK's BSD 3-Clause license.
+- VTK libraries (vtk*): BSD 3-Clause (VTK's Copyright.txt), and for VTK's modules and the third-party libraries it
+  builds in (its own copies of zlib, libpng, FreeType, Expat, LZ4, LZMA, JsonCpp, pugixml, fmt, glad and others) the
+  licenses VTK installs; THIRD-PARTY-NOTICES.txt in each runtime package holds them all.
+  Corresponding source: https://github.com/Kitware/VTK (tag v9.7.1), built by vcpkg/ports/vtk with the modules and
+  options listed there (vcpkg.json, vcpkg/triplets).

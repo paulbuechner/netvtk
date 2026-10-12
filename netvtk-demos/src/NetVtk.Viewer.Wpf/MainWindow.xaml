@@ -1,0 +1,33 @@
+<Window x:Class="NetVtk.Viewer.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:NetVtk.Viewer.Wpf"
+        Title="NetVtk Viewer (WPF)" Width="1100" Height="750"
+        Loaded="Window_Loaded" Closed="Window_Closed">
+  <DockPanel>
+    <ToolBarTray DockPanel.Dock="Top">
+      <ToolBar>
+        <Button x:Name="OpenButton" Content="Open..." Click="Open_Click" />
+        <Button x:Name="SampleButton" Content="Sample" Click="Sample_Click" />
+        <Separator />
+        <TextBlock Text="Field" VerticalAlignment="Center" Margin="4,0" />
+        <ComboBox x:Name="Fields" Width="240" IsEnabled="False" SelectionChanged="Options_Changed" />
+        <Separator />
+        <CheckBox x:Name="Warp" Content="Warp" IsEnabled="False" VerticalAlignment="Center" Click="Options_Changed" />
+        <Slider x:Name="WarpScale" Width="110" Minimum="0" Maximum="3" Value="1" IsEnabled="False"
+                VerticalAlignment="Center" ToolTip="Times the scale that moves the largest displacement a tenth of the size"
+                ValueChanged="Slider_Changed" />
+        <Separator />
+        <CheckBox x:Name="Cut" Content="Cut" IsEnabled="False" VerticalAlignment="Center" Click="Options_Changed" />
+        <Slider x:Name="CutPosition" Width="110" Minimum="0" Maximum="1" Value="0.5" IsEnabled="False"
+                VerticalAlignment="Center" ToolTip="Where the plane cuts the longest axis" ValueChanged="Slider_Changed" />
+        <Separator />
+        <CheckBox x:Name="Contours" Content="Contours" IsEnabled="False" VerticalAlignment="Center" Click="Options_Changed" />
+      </ToolBar>
+    </ToolBarTray>
+    <StatusBar DockPanel.Dock="Bottom">
+      <TextBlock x:Name="Status" />
+    </StatusBar>
+    <local:ViewerHost x:Name="Host" />
+  </DockPanel>
+</Window>

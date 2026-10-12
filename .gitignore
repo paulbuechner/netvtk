@@ -1,0 +1,23 @@
+# .NET build output and local state
+bin/
+obj/
+*.user
+TestResults/
+
+# IDEs
+.vs/
+.idea/
+.vscode/
+
+__pycache__/
+
+# format.py's temporary project and solution
+/.format/
+/NetVtk.Format.slnx
+
+# logs of build.py, docker runs and scratch work
+/netvtk-*/log/
+
+# docfx output, and the class index classes.py writes from netvtk-core's classes.json
+/netvtk-documentation/_site/
+/netvtk-documentation/classes/

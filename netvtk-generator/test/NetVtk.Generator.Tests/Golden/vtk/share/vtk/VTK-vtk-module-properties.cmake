@@ -1,0 +1,4 @@
+set_property(TARGET "VTK::Core" PROPERTY "INTERFACE_vtk_module_depends" "")
+set_property(TARGET "VTK::Core" PROPERTY "INTERFACE_vtk_module_headers" "${_vtk_module_import_prefix}/include/vtk-9.7/vtkCommand.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkObject.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkObjectBase.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkSmartPointer.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkType.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkVersionMacros.h")
+set_property(TARGET "VTK::Demo" PROPERTY "INTERFACE_vtk_module_depends" "VTK::Core")
+set_property(TARGET "VTK::Demo" PROPERTY "INTERFACE_vtk_module_headers" "${_vtk_module_import_prefix}/include/vtk-9.7/vtkDemoSource.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkDemoTemplate.h;${_vtk_module_import_prefix}/include/vtk-9.7/vtkWin32DemoWindow.h")
