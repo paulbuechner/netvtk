@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NetVtk/NetVtk.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/NetVtk.Tests/NetVtk.Tests.csproj" />
+  </Folder>
+</Solution>

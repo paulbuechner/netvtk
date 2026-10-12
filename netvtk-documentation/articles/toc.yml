@@ -1,0 +1,40 @@
+- name: Introduction
+  href: introduction.md
+- name: Getting started
+  href: getting-started.md
+- name: Guide
+  items:
+  - name: Pipelines
+    href: pipelines.md
+  - name: Data and arrays
+    href: data.md
+  - name: Results
+    href: results.md
+  - name: Rendering and hosting
+    href: rendering.md
+  - name: Observers and messages
+    href: observers.md
+- name: Concepts
+  items:
+  - name: From C++ to C#
+    href: mapping.md
+  - name: Object lifetimes
+    href: lifetimes.md
+  - name: Native interop
+    href: interop.md
+- name: Reference
+  items:
+  - name: Platforms
+    href: platforms.md
+  - name: Modules
+    href: modules.md
+  - name: Building from source
+    href: building.md
+  - name: Troubleshooting
+    href: troubleshooting.md
+- name: Development
+  items:
+  - name: Design decisions
+    href: design.md
+  - name: Licensing
+    href: licensing.md

@@ -1,0 +1,9 @@
+# Golden fixture: generate config for the fake VTK modules, one setting of each kind.
+libraries:
+  Core: [Core]
+  Demo: [Demo]
+exclude_headers: [vtkWin32*.h]
+modules:
+  Core:
+    exclude_methods: [vtkObjectBase::Register, vtkObjectBase::UnRegister, vtkObjectBase::Delete]
+    directors: [vtkCommand]

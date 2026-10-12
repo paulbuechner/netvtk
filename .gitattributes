@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# written by netvtk-gen: collapsed in GitHub diffs, left out of its language statistics
+netvtk-core/src/SWIG_files/wrapper/*.i linguist-generated
+netvtk-core/src/SWIG_files/headers/*.hxx linguist-generated
+netvtk-core/src/SWIG_files/*.json linguist-generated
+netvtk-core/src/NetVtk/**/*.g.cs linguist-generated

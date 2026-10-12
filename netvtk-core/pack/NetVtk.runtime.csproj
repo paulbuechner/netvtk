@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    NetVtk.runtime.<rid>: the natives of one RID (artifacts/runtimes/<rid>/native, from build.py native) with their
+    license notices. build.py pack packs it once per RID (-p:NetVtkRid=<rid>); the NetVtk package depends on all of them.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NetVtkRid Condition="'$(NetVtkRid)' == ''">win-x64</NetVtkRid>
+    <PackageId>NetVtk.runtime.$(NetVtkRid)</PackageId>
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
+    <Authors>Paul Büchner</Authors>
+    <Copyright>Copyright (c) 2026 Paul Büchner</Copyright>
+    <Description>Native libraries of NetVtk for $(NetVtkRid): the NetVtk libraries and VTK 9.7.1. Referenced by the NetVtk package; not meant to be installed alone.</Description>
+    <PackageTags>vtk;visualization;native</PackageTags>
+    <PackageProjectUrl>https://paulbuechner.github.io/netvtk/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/paulbuechner/netvtk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseFile>THIRD-PARTY-NOTICES.txt</PackageLicenseFile>
+    <!-- natives only: no assembly, no dependencies (NU5128: lib/ placeholders without dependency groups) -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <NetVtkStage>$(MSBuildThisFileDirectory)..\artifacts\runtimes\$(NetVtkRid)</NetVtkStage>
+  </PropertyGroup>
+
+  <!-- PackagePath with forward slashes: CI packs on Linux, where a trailing backslash gives entries like native//libX.so -->
+  <ItemGroup>
+    <None Include="$(NetVtkStage)\native\*" Pack="true" PackagePath="runtimes/$(NetVtkRid)/native/" Visible="false" />
+    <None Include="$(NetVtkStage)\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="/" Visible="false" />
+    <!-- empty lib/ placeholders: compatible with .NET Framework 3.5+ and netstandard2.0 consumers (.NET 6+ included) -->
+    <None Include="_._" Pack="true" PackagePath="lib/net35/;lib/netstandard2.0/" Visible="false" />
+    <!-- Windows only: .NET Framework ignores runtimes/, so the targets copy the natives into x64\ or x86\ next to the app -->
+    <None Include="$(PackageId).targets" Condition="Exists('$(PackageId).targets')" Pack="true" PackagePath="build/net35/;buildTransitive/net35/" />
+  </ItemGroup>
+
+  <Target Name="NetVtkCheckStage" BeforeTargets="GenerateNuspec">
+    <Error Condition="!Exists('$(NetVtkStage)\native')" Text="No natives in $(NetVtkStage)\native: run build.py native for $(NetVtkRid) first." />
+  </Target>
+
+</Project>

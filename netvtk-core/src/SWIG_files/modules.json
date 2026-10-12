@@ -1,0 +1,37 @@
+{
+  "Common": [
+    "CommonCore",
+    "CommonMath",
+    "CommonTransforms",
+    "CommonColor",
+    "CommonDataModel",
+    "CommonExecutionModel"
+  ],
+  "Filters": [
+    "FiltersCore",
+    "FiltersGeneral",
+    "FiltersGeometry",
+    "FiltersSources",
+    "FiltersModeling"
+  ],
+  "IO": [
+    "IOCore",
+    "IOLegacy",
+    "IOXML",
+    "IOExodus",
+    "IOCGNSReader"
+  ],
+  "Rendering": [
+    "RenderingCore",
+    "RenderingOpenGL2",
+    "RenderingAnnotation",
+    "RenderingFreeType",
+    "RenderingUI",
+    "RenderingVolume",
+    "RenderingVolumeOpenGL2"
+  ],
+  "Interaction": [
+    "InteractionStyle",
+    "InteractionWidgets"
+  ]
+}

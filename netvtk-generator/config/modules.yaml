@@ -1,0 +1,36 @@
+# netvtk-gen generate: which VTK modules to generate and how. Hand-edited.
+# What the generator can't derive is hand-written in netvtk-core's src/SWIG_files/extras/<Module>.i; a generated module
+# includes its companion after the enums, before the classes.
+
+# the native libraries (NetVtk<Library>) and the VTK modules whose wrappers each holds, in build order: the module set
+# of ../PLAN.md, which netvtk-core's VTK port builds (NETVTK_MODULES and its features cgns, exodus, volume), and IOCore,
+# which the IO modules derive from (vtkWriter: Write, SetInputData)
+libraries:
+  Common: [CommonCore, CommonMath, CommonTransforms, CommonColor, CommonDataModel, CommonExecutionModel]
+  Filters: [FiltersCore, FiltersGeneral, FiltersGeometry, FiltersSources, FiltersModeling]
+  IO: [IOCore, IOLegacy, IOXML, IOExodus, IOCGNSReader]
+  Rendering: [RenderingCore, RenderingOpenGL2, RenderingAnnotation, RenderingFreeType, RenderingUI, RenderingVolume,
+              RenderingVolumeOpenGL2]
+  Interaction: [InteractionStyle, InteractionWidgets]
+
+# one platform's classes: VTK installs the platform's only (these are Windows', which generate runs on), and the output
+# builds everywhere
+exclude_headers:
+  - vtkWin32*Window*.h
+  - vtkWindows.h
+  - vtkTestOpenGLVersion.h
+
+modules:
+  # the reference count belongs to the proxies (VtkObjects.i)
+  CommonCore:
+    exclude_methods:
+      - vtkObjectBase::Register
+      - vtkObjectBase::UnRegister
+      - vtkObjectBase::Delete
+      - vtkObjectBase::FastDelete
+      - vtkObjectBase::SetReferenceCount
+      # Windows' (VTK_WORKAROUND_WINDOWS_MANGLE: windows.h renames GetClassName)
+      - vtkObjectBase::GetClassNameA
+      - vtkObjectBase::GetClassNameW
+    # C# observers; C# receives VTK's messages (Vtk.VtkOutput)
+    directors: [vtkCommand, vtkOutputWindow]

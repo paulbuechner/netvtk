@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "netvtk-core",
+  "version-string": "0.0.0",
+  "description": "VTK for the NetVtk SWIG wrapper",
+  "dependencies": [
+    {
+      "name": "vtk",
+      "features": ["cgns", "exodus", "opengl", "volume"]
+    }
+  ],
+  "overrides": [
+    { "name": "vtk", "version": "9.7.1", "port-version": 1 }
+  ]
+}
