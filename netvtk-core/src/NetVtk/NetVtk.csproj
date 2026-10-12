@@ -1,0 +1,113 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      net35 (CLR 2), net45, net452, net462: .NET Framework, one build per supported floor; no netstandard facades
+      net6.0, net8.0, net10.0: modern .NET (NativeLibrary resolver)
+      netstandard2.0: libraries that reference NetVtk, other runtimes
+    -->
+    <TargetFrameworks>netstandard2.0;net35;net45;net452;net462;net6.0;net8.0;net10.0</TargetFrameworks>
+    <!-- .NET 6 is out of support (NETSDK1138), but consumers still need it -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <AssemblyName>NetVtk</AssemblyName>
+    <RootNamespace>Vtk</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- SWIG proxies hide base members (static SafeDownCast, New) and have no doc comments; VTK's lower-case class names
+         (vtkObject) stay; the generated code uses the members VTK deprecates, which are [Obsolete] for callers -->
+    <NoWarn>$(NoWarn);CS0108;CS0114;CS1591;CS8981;CS0612;CS0618</NoWarn>
+    <!-- the hand-written members' documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NetVtkGeneratedCs>$(MSBuildThisFileDirectory)..\..\build\generated\cs</NetVtkGeneratedCs>
+  </PropertyGroup>
+
+  <!-- SWIG output (python build.py generate); not committed -->
+  <ItemGroup>
+    <Compile Include="$(NetVtkGeneratedCs)\**\*.cs" Link="Generated\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NetVtk.Tests" />
+  </ItemGroup>
+
+  <!-- NuGet (python build.py pack): this assembly; the natives live in NetVtk.runtime.<rid> (pack/) -->
+  <PropertyGroup>
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
+    <Authors>Paul Büchner</Authors>
+    <Copyright>Copyright (c) 2026 Paul Büchner</Copyright>
+    <Description>C# bindings for the Visualization Toolkit (VTK) 9.7.1, with VTK's names: data sets and arrays, filters, readers and writers, rendering and interaction, for visualizing simulation results. For .NET Framework 3.5+, .NET 6+ and netstandard2.0, on Windows (x64, x86), Linux (x64) and macOS (arm64).</Description>
+    <PackageTags>vtk;visualization;3d;rendering;mesh;scientific;simulation;cae;fem;cfd</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- with VTK's documentation: NetVtk.xml is the doc comments of VTK's headers, under VTK's license -->
+    <PackageLicenseExpression Condition="'$(NetVtkDocumentation)' != ''">MIT AND BSD-3-Clause</PackageLicenseExpression>
+    <PackageProjectUrl>https://paulbuechner.github.io/netvtk/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/paulbuechner/netvtk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Source Link (in the SDK) with the SWIG-generated sources embedded, symbols as .snupkg -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageReleaseNotes Condition="'$(NetVtkReleaseNotesFile)' != ''">$([System.IO.File]::ReadAllText('$(NetVtkReleaseNotesFile)'))</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <!--
+    README.md here is the package's, for its users (nuget.org); netvtk-core's README is for building NetVtk. Include, not
+    Update: pack runs in the outer build of the target frameworks, which has no default items (NU5039)
+  -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    the SWIG interface files, module headers and indexes the package was built from, for bindings that build on NetVtk's
+    proxies (swig/interop/NetVtkInterop.i); NuGet's consumers ignore swig/
+  -->
+  <ItemGroup>
+    <None Include="..\SWIG_files\common\*.i" Pack="true" PackagePath="swig/common/" Visible="false" />
+    <None Include="..\SWIG_files\wrapper\*.i" Pack="true" PackagePath="swig/wrapper/" Visible="false" />
+    <None Include="..\SWIG_files\extras\*.i" Pack="true" PackagePath="swig/extras/" Visible="false" />
+    <None Include="..\SWIG_files\interop\*.i" Pack="true" PackagePath="swig/interop/" Visible="false" />
+    <None Include="..\SWIG_files\headers\*.hxx" Pack="true" PackagePath="swig/headers/" Visible="false" />
+    <None Include="..\SWIG_files\*.json" Pack="true" PackagePath="swig/" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    build.py pack sets NetVtkRuntimeRids (an environment variable, win-x64;win-x86;...): one dependency per RID, same
+    version, restored from artifacts/packages
+  -->
+  <ItemGroup Condition="'$(NetVtkRuntimeRids)' != ''">
+    <NetVtkRuntimeRid Include="$(NetVtkRuntimeRids)" />
+    <PackageReference Include="@(NetVtkRuntimeRid->'NetVtk.runtime.%(Identity)')" Version="$(Version)" PrivateAssets="none" />
+  </ItemGroup>
+
+  <!--
+    the .NET Framework targets compile against NuGet's reference assemblies, the same on every machine (the SDK adds them
+    only where a targeting pack is missing): no targeting pack needed, also on Linux/macOS
+  -->
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- with VTK's documentation, VTK's license (build.py docs puts it next to the XML) -->
+  <ItemGroup Condition="'$(NetVtkDocumentation)' != ''">
+    <None Include="$([System.IO.Path]::GetDirectoryName('$(NetVtkDocumentation)'))\VTK-LICENSE.txt" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    build.py pack with VTK's documentation (build.py docs writes it): in place of the compiler's file in each framework's
+    output, which NuGet packs next to the assembly. It holds VTK's text (BSD-3-Clause), so it's never committed.
+  -->
+  <Target Name="NetVtkDocumentation" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(NetVtkDocumentation)' != ''">
+    <Error Condition="!Exists('$(NetVtkDocumentation)')" Text="$(NetVtkDocumentation) is missing: run 'python build.py docs' first." />
+    <Copy SourceFiles="$(NetVtkDocumentation)" DestinationFiles="$(OutDir)$(TargetName).xml" />
+  </Target>
+
+  <Target Name="NetVtkCheckGenerated" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('$(NetVtkGeneratedCs)')" Text="SWIG output missing: run 'python build.py generate' first." />
+  </Target>
+
+</Project>

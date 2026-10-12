@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="data-copies-title data-copies-desc" width="800" height="400">
+        <title id="data-copies-title">Copies and views</title>
+        <desc id="data-copies-desc">A typed array's values are one block of native memory: FromArray and CopyFrom copy a C# array into it and ToArray copies it out, one memcpy each; AsSpan() on .NET 6+ gives a Span over the native values themselves, no copy, after writing through which Modified() is due; ToDoubleArray() copies any vtkDataArray, typed or not, into a new double[], converted.</desc>
+        <defs><style>@font-face{font-family:'Geist';font-weight:600;font-style:normal;src:url(data:font/woff;base64,d09GRgABAAAAAArwABAAAAAADVwAAczNAAAAAAAAAAAAAAAAAAAAAAAAAABHREVGAAAIxAAAACsAAAAwAFUBxEdQT1MAAAjwAAABcQAAAl4CoOyAR1NVQgAACmQAAABJAAAAViCsJYZPUy8yAAAB4AAAAEUAAABgVT1kbFNUQVQAAAqwAAAAPgAAAETlk8xQY21hcAAAAoQAAAB0AAAApAMXA+tnYXNwAAAIvAAAAAgAAAAIAAAAEGdseWYAAAM0AAAFDQAABlhTSYayaGVhZAAAAWwAAAA2AAAANi2mhwJoaGVhAAABpAAAAB8AAAAkBuAF6GhtdHgAAAIoAAAAXAAAAGI0NARkbG9jYQAAAwAAAAA0AAAANBdPGMptYXhwAAABxAAAABsAAAAgACQAVG5hbWUAAAhEAAAAYQAAAIILTRsMcG9zdAAACKgAAAATAAAAIP+fADJwcmVwAAAC+AAAAAcAAAAHaAaMhQABAAAAAczNVJj7D18PPPUAAwPoAAAAAOWpZlMAAAAA5fQQpwAL/2oC5gLuAAAABgACAAAAAAAAeJxjYGRgYH777yaQZGbgZuBhesb8ggEVSAAAdzUE0QB4nGNgZGBgkGQwYmBhUABiEA8BmBgYAQskAHkAeJxjYGGKZYpgYGVgYOoC0gwM3hCaMY7BiNGBARUwInPCgpx9GA4wKDBUMr/9d5OBgcWBkQ2mhkmM6RiQUmDgAgDShwpaAAAAeJxjimDQYDrKIMx0hCGAaQ6DKZMHAzeTC4M6Uy6DGxCrM/kDcQmDG6MmkB8JxNEQOcaZQLyaQZcpFCjmwSDKZMUgyszMoMvwhoGBsZwhAIh5mVQYjBg0AAQnDsN4nGNgYGBiYGBgBmIRIMkIplkYJgBpBSBkAdM2DHYMjgwuDCEM0QyxDEkMqQw5DAUMRQxlDJX//6OoCAarSGRIYchmyAOqKAGp+P/l/53/N/8f+L/v/4b/u/7v/L/k/+L/8/7P/T/n/+z/M8F24gUAuO4o6rgB/4WwBI0AAAAAJgBAAF0ApQC2AP4BMQFkAZYBrQHCAegCFAJLAmYCgwKlArcC1gLiAuIC9AMFAxgDLHicXVRfbFNlFP++r+tt3Tq6u/a22K0b7bW97cqarbe3t+22jq69lT9bW8oqE9Y0WDdJIYwN2QZIU0Vk+iDEKU8qezARgRfRRH0ykWwhqIn4oCRGE2OCCSFGidFo1jvPvR0BfLntw++c359zvoMakAchIpAVpEE61ISMCB2hHbTLQTtMHLZqsIg9pFk24y9lQc/gbxhG7oEfslKLPkEqtSk7OWOvHVM/iCAT9LoKvXSoEfpgHrOcQ2fiNSaMLmC00Cf/2rfv60ml+OJFbMWbAY6y8HkHavSIVrj5gIUxUyzHB0JC0M2y2buXPvn4/cPlqYMHp8pk5bPLlz6dnj92Yh5hJKz9Tp4j36EehCSn282JHQSqlDI35ydCMBSCZharzk9YJ8WY4W8Hgd4UHh+rbqNeprxSb1dfp237trFyT2wmm59N6k9pXYPd4XhbarB4uGdoviU2tV3v3+JgvB1tPpY28yPRWFEYKEsUF3XwXXZ3m9EcywnxIo9ATxM46Vfdgw9WcDAs/cst0vs9yU9P1y4rXrm1PyFrJ3KhXoR2O92gURTBpZPScapaBmTyPENRLBgSrBsIpxgSdJSi/+fRyafGPgzyfqHxpZYXSjNHjUaaatvgCLY36YXsRl/M+ZrP5TWMSFKaZiMRn4fK7z1y4AumpUAII/j1rNhRcPZ7O9ofY9s7nYqeFOhJgeJWtEnNkNOxNM/Uc1OS4upDcKr0FjwR3mXVHK9acqI0IYoTz4hDcdHb19kZNfT4MmRl1cVLJ/P5k9L+Qm7XuDcdDmW67rvmHmJxr4/GKvA0y6ks6tDqU8INyVIo9GwinLdUj2ssY7RHtNtFT1SSDMlKPl9J+rtWa9GMr2e/JxOOpD2FXLb4gMWJrKjjERbI1GGxwGKIVorS8CoN7s7ObtlyND18JCafbpAivkjTKcuLP/7dMMTzCYNUGR09mUpW99hTT3KsPr0Hb4sPDikTTgGRkleTuqm0yOtMLKdjUtUf3r1569zbo2RFLv7xk3z97tOLdTRm1tEwayhQh7sSTVUZE9c/RLbWls3m0npfk6pd6WvlYkQVTrP0eix06nmtUR/Y6uvb2VVt9Tr5AWI5T4WTm4J7++UPsL875tialL+9n0MQehlR2/9yeHigStD+zFw8PpfJzMbjs5lYIhGLJZOKeZggzHG0Iu0f35UrKLOs70oZvDsRg1jYXUXlg7as+vxo8ZF1SZ3QNJv3DgxPBPiJYY/U22ioRBOJKBfu7IicJ1dmqL6B4crISGW4Pcg2yv/cK+RyBS4djaa59exmiKV+j+pcPKN2plPz2iZDItob8IbaiOVNMiId2sh75a9AYzdUvU4W63ds30OZY3iNuD27o7rJuUO+gPdtz+B/5VaXvYQ/KpXUyUJqG4DPXH+X9TqwQysrCovz185itdsfjFSPaloMewwHinhMvp4YlIYwX7uzqB1OQw8GYuKhBwWaNbwJ7t6ta2cWFs5cIxb5AH6rdkfBQIouwLQAj6AspcjWoRDiwaTtcZ3R9fnpV6qnb7bGo+dLLSYXwfIcfrV2NbB5bU3xR26TxQa34g/ujBGPIUV9du0NXCa/KZdHgssNh4fHZfk2ti0tHdKMT9YOA6YZMFwds1t5eIKDbl5awrZDk+Tc5Op7gAggG14lmxXEnOBiXIKWCeCz8jS+YZu50nVlZnlB4fIA6l4dNeECmFbQ4ntyCN8A4Fnb8sKygv0Px+Rv1AAAAHicLcu9CkBgGIbh+/MzkGQ2GCkH4ABsVgbzF0L5KXH+nmK77vfpBXxqXIwX4BDDZwOR6nNGQvo71738XRBS0TIx87BhuehVq3rhppN3Vc2pdaTRzUorg75ObZbjBTolDnIAAAB4nGNgZgCD/3MYjBiwAAAqgwHRAAABAAH//wAPeJxjYGRgYOABYhkgZgJCRgYhIBYGQiYGNiCLB4hBfEYGFgZGxiYAD8kBGwB4nFVRy0pCURRd9/p+BEFW4qgviL7AUTRq2A9USAPFgTTpbxw2bCwNmtQoDCpCLEjERMXC8oEVuVpno1B3s1/37LXP2mfDAxDHFrIIbu/s7iFzeFIqIHNUyuWRKewfF5FBUDUg4Wq9fK5URNRFpkH4ynz1yCpbttqAMBvYVB5QHsOqojWklEV4gag0KXXYFHzvwGG8kneKJQk44UR25rykpbjCFr/lx+5k8bEvvWfX4oEqpQjLvxm+wWd+6igmAUL68yB9ldbYM8wXh7IjDmSHbNjJI8fyU06NwcziplXfWtcOu6zP7+5pBrDMc3aMdYvvfNHfqjs1Br2/fP8zN9/jme6sqHeZV64v4kI5Pm3WZJ+UNTVX17rV2Zav8lJ3Xds0fVbM3vDOZvhwfDVrjD8c2Q2Ouy/xsKJoHWl5T5JGWNsI6G1CVgEkFNmetcmkKiKS5JxwVLJAuZ3GVenN+yaF86UhdYhYZWKO0sv/AhL61XUAAAB4nGNgZGBg4GJQYTBiYHJx8wlh4MtJLMlj4GNgAYoz/P/PAJJnzMlMT2TgALHAmAUIOYA0CAtBaRYGYQYmBn4gi5GBHwCtSwdzAAAAeJxjYGRgZOBgYGJgYBABkyoMTOXpGSWMQGZmSWIOoxpQnoVBgAEkwMAoxxQBpJiBPCZGdQawEAMDALMPBJMAAA==) format('woff')}
+@font-face{font-family:'Geist Mono';font-weight:400;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}</style><clipPath id="netvtk-card"><rect width="800" height="400" rx="12"/></clipPath>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6a6a6"/></marker>
+        </defs><g clip-path="url(#netvtk-card)">
+        <rect width="100%" height="100%" fill="#171717"/>
+
+        <!-- Zones first: the two sides of the boundary. -->
+        <rect x="40" y="40" width="256" height="304" rx="8" fill="rgba(230,230,230,0.04)" stroke="rgba(230,230,230,0.18)" stroke-width="0.8"/>
+        <rect x="488" y="40" width="272" height="304" rx="8" fill="rgba(230,230,230,0.04)" stroke="rgba(230,230,230,0.18)" stroke-width="0.8"/>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#8c8c8c" letter-spacing="0.14em">
+          <text x="56" y="58">C#</text>
+          <text x="504" y="58">NATIVE</text>
+        </g>
+
+        <!-- Any vtkDataArray, the typed arrays among them: a container, drawn before the arrows that cross it. -->
+        <rect x="504" y="72" width="240" height="256" rx="6" fill="#171717"/>
+        <rect x="504" y="72" width="240" height="256" rx="6" fill="rgba(230,230,230,0.10)" stroke="#a6a6a6"/>
+
+        <!-- Copies: solid. The view: dashed. -->
+        <g fill="none" stroke="#a6a6a6" stroke-width="1.2" marker-end="url(#arrow)">
+          <path d="M280,104 H518"/>
+          <path d="M520,128 H282"/>
+          <path d="M520,212 H282" stroke-dasharray="5,4"/>
+          <path d="M504,292 H282"/>
+        </g>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#8c8c8c" letter-spacing="0.06em" text-anchor="middle">
+          <rect x="336" y="86" width="112" height="12" rx="2" fill="#171717"/>
+          <text x="392" y="95">FromArray, CopyFrom</text>
+          <rect x="364" y="134" width="56" height="12" rx="2" fill="#171717"/>
+          <text x="392" y="143">ToArray</text>
+          <rect x="364" y="194" width="56" height="12" rx="2" fill="#171717"/>
+          <text x="392" y="203">AsSpan()</text>
+          <rect x="344" y="274" width="96" height="12" rx="2" fill="#171717"/>
+          <text x="392" y="283">ToDoubleArray()</text>
+        </g>
+
+        <!-- C# side. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="56" y="88" width="224" height="56" rx="6" fill="#1f1f1f" stroke="#e6e6e6"/>
+          <text x="168" y="112" fill="#e6e6e6" font-size="12" font-weight="600">T[]</text>
+          <text x="168" y="128" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">double[], long[], byte[], ...</text>
+
+          <rect x="56" y="184" width="224" height="56" rx="6" fill="#1f1f1f" stroke="#e6e6e6"/>
+          <text x="168" y="204" fill="#e6e6e6" font-size="12" font-weight="600">Span&lt;T&gt;</text>
+          <text x="168" y="219" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">.NET 6+: the native values</text>
+          <text x="168" y="232" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">after writing: Modified()</text>
+
+          <rect x="56" y="264" width="224" height="56" rx="6" fill="#1f1f1f" stroke="#e6e6e6"/>
+          <text x="168" y="288" fill="#e6e6e6" font-size="12" font-weight="600">double[]</text>
+          <text x="168" y="304" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">a new array, converted</text>
+        </g>
+
+        <!-- Native side: the typed array, focal, its values one block. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="520" y="88" width="208" height="144" rx="6" fill="#171717"/>
+          <rect x="520" y="88" width="208" height="144" rx="6" fill="rgba(240,138,89,0.13)" stroke="#f08a59"/>
+          <text x="624" y="112" fill="#e6e6e6" font-size="12" font-weight="600">typed array</text>
+          <text x="624" y="128" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">vtkDoubleArray, vtkIntArray, ...</text>
+
+          <rect x="544" y="144" width="160" height="20" rx="2" fill="#1f1f1f" stroke="#f08a59" stroke-width="0.8"/>
+          <g stroke="rgba(240,138,89,0.64)" stroke-width="0.8">
+            <line x1="564" y1="144" x2="564" y2="164"/>
+            <line x1="584" y1="144" x2="584" y2="164"/>
+            <line x1="604" y1="144" x2="604" y2="164"/>
+            <line x1="624" y1="144" x2="624" y2="164"/>
+            <line x1="644" y1="144" x2="644" y2="164"/>
+            <line x1="664" y1="144" x2="664" y2="164"/>
+            <line x1="684" y1="144" x2="684" y2="164"/>
+          </g>
+          <text x="624" y="184" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">its values, one block</text>
+          <text x="624" y="197" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">copied by one memcpy</text>
+
+          <text x="624" y="284" fill="#e6e6e6" font-size="12" font-weight="600">any vtkDataArray</text>
+          <text x="624" y="300" fill="#a6a6a6" font-size="9" font-family="'Geist Mono', monospace">typed or not: vtkLongArray, ...</text>
+        </g>
+
+        <!-- Legend. -->
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#8c8c8c" letter-spacing="0.14em">
+          <line x1="40" y1="372" x2="64" y2="372" stroke="#a6a6a6" stroke-width="1.2"/>
+          <text x="72" y="375">A COPY</text>
+          <line x1="152" y1="372" x2="176" y2="372" stroke="#a6a6a6" stroke-width="1.2" stroke-dasharray="5,4"/>
+          <text x="184" y="375">A VIEW, NO COPY</text>
+        </g>
+      </g></svg>

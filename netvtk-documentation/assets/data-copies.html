@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copies and views</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Geist', system-ui, sans-serif; background: #f5f5f5; color: #2d3142; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1200px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #4f5d75; margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', serif; font-size: 2rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 800px; display: block; }
+    @media print { .diagram-container { overflow-x: visible; } svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · data.md</p>
+    <h1>Copies and views</h1>
+    <div class="diagram-container">
+      <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="data-copies-title data-copies-desc">
+        <title id="data-copies-title">Copies and views</title>
+        <desc id="data-copies-desc">A typed array's values are one block of native memory: FromArray and CopyFrom copy a C# array into it and ToArray copies it out, one memcpy each; AsSpan() on .NET 6+ gives a Span over the native values themselves, no copy, after writing through which Modified() is due; ToDoubleArray() copies any vtkDataArray, typed or not, into a new double[], converted.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        </defs>
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- Zones first: the two sides of the boundary. -->
+        <rect x="40" y="40" width="256" height="304" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="488" y="40" width="272" height="304" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#5a6580" letter-spacing="0.14em">
+          <text x="56" y="58">C#</text>
+          <text x="504" y="58">NATIVE</text>
+        </g>
+
+        <!-- Any vtkDataArray, the typed arrays among them: a container, drawn before the arrows that cross it. -->
+        <rect x="504" y="72" width="240" height="256" rx="6" fill="#f5f5f5"/>
+        <rect x="504" y="72" width="240" height="256" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75"/>
+
+        <!-- Copies: solid. The view: dashed. -->
+        <g fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)">
+          <path d="M280,104 H518"/>
+          <path d="M520,128 H282"/>
+          <path d="M520,212 H282" stroke-dasharray="5,4"/>
+          <path d="M504,292 H282"/>
+        </g>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#5a6580" letter-spacing="0.06em" text-anchor="middle">
+          <rect x="336" y="86" width="112" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="392" y="95">FromArray, CopyFrom</text>
+          <rect x="364" y="134" width="56" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="392" y="143">ToArray</text>
+          <rect x="364" y="194" width="56" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="392" y="203">AsSpan()</text>
+          <rect x="344" y="274" width="96" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="392" y="283">ToDoubleArray()</text>
+        </g>
+
+        <!-- C# side. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="56" y="88" width="224" height="56" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="168" y="112" fill="#2d3142" font-size="12" font-weight="600">T[]</text>
+          <text x="168" y="128" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">double[], long[], byte[], ...</text>
+
+          <rect x="56" y="184" width="224" height="56" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="168" y="204" fill="#2d3142" font-size="12" font-weight="600">Span&lt;T&gt;</text>
+          <text x="168" y="219" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">.NET 6+: the native values</text>
+          <text x="168" y="232" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">after writing: Modified()</text>
+
+          <rect x="56" y="264" width="224" height="56" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="168" y="288" fill="#2d3142" font-size="12" font-weight="600">double[]</text>
+          <text x="168" y="304" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">a new array, converted</text>
+        </g>
+
+        <!-- Native side: the typed array, focal, its values one block. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="520" y="88" width="208" height="144" rx="6" fill="#f5f5f5"/>
+          <rect x="520" y="88" width="208" height="144" rx="6" fill="rgba(191,69,32,0.08)" stroke="#bf4520"/>
+          <text x="624" y="112" fill="#2d3142" font-size="12" font-weight="600">typed array</text>
+          <text x="624" y="128" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkDoubleArray, vtkIntArray, ...</text>
+
+          <rect x="544" y="144" width="160" height="20" rx="2" fill="#ffffff" stroke="#bf4520" stroke-width="0.8"/>
+          <g stroke="rgba(191,69,32,0.40)" stroke-width="0.8">
+            <line x1="564" y1="144" x2="564" y2="164"/>
+            <line x1="584" y1="144" x2="584" y2="164"/>
+            <line x1="604" y1="144" x2="604" y2="164"/>
+            <line x1="624" y1="144" x2="624" y2="164"/>
+            <line x1="644" y1="144" x2="644" y2="164"/>
+            <line x1="664" y1="144" x2="664" y2="164"/>
+            <line x1="684" y1="144" x2="684" y2="164"/>
+          </g>
+          <text x="624" y="184" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">its values, one block</text>
+          <text x="624" y="197" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">copied by one memcpy</text>
+
+          <text x="624" y="284" fill="#2d3142" font-size="12" font-weight="600">any vtkDataArray</text>
+          <text x="624" y="300" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">typed or not: vtkLongArray, ...</text>
+        </g>
+
+        <!-- Legend. -->
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#5a6580" letter-spacing="0.14em">
+          <line x1="40" y1="372" x2="64" y2="372" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="72" y="375">A COPY</text>
+          <line x1="152" y1="372" x2="176" y2="372" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4"/>
+          <text x="184" y="375">A VIEW, NO COPY</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

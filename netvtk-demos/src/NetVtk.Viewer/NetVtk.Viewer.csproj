@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>The viewer both demos share: a VTK render window in a native window, simulation results (.vtu) coloured by a field, with a scalar bar, a cut plane, contours and a warp.</Description>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>NetVtk.Viewer</RootNamespace>
+    <!-- the source-generated P/Invoke (LibraryImport) and the window procedure's function pointer -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetVtk" Version="$(NetVtkPackageVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NetVtk.Viewer.Tests" />
+  </ItemGroup>
+
+</Project>

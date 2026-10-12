@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A recipe for results</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Geist', system-ui, sans-serif; background: #f5f5f5; color: #2d3142; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1200px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #4f5d75; margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', serif; font-size: 2rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 800px; display: block; }
+    @media print { .diagram-container { overflow-x: visible; } svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · results.md</p>
+    <h1>A recipe for results</h1>
+    <div class="diagram-container">
+      <svg viewBox="0 0 800 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="results-recipe-title results-recipe-desc">
+        <title id="results-recipe-title">A recipe for results</title>
+        <desc id="results-recipe-desc">vtkXMLUnstructuredGridReader reads a .vtu; vtkWarpVector moves its points by the displacement, vtkDataSetSurfaceFilter takes the outer faces and vtkPolyDataMapper colours them by stress through a vtkLookupTable, which a vtkScalarBarActor shows too; vtkCutter and vtkContourFilter take the reader's output as branches. Exodus II and CGNS readers give the same data sets as a tree of blocks.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        </defs>
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- Connectors first: the main line, the table's two users, the reader's two branches. -->
+        <g fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)">
+          <path d="M224,176 H254"/>
+          <path d="M392,176 H422"/>
+          <path d="M584,176 H614"/>
+          <path d="M688,104 V142"/>
+          <path d="M616,72 H586"/>
+          <path d="M112,208 V254"/>
+          <path d="M176,208 V224 Q176,232 184,232 H316 Q324,232 324,240 V254"/>
+        </g>
+
+        <!-- Callout: the other readers. -->
+        <path d="M120,86 V142" fill="none" stroke="rgba(45,49,66,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+        <circle cx="120" cy="143" r="2" fill="#2d3142"/>
+        <g font-family="'Instrument Serif', serif" font-size="14" font-style="italic" fill="#2d3142">
+          <text x="40" y="60">Exodus II and CGNS readers: the same</text>
+          <text x="40" y="77">data sets, as a tree of blocks</text>
+        </g>
+
+        <!-- Nodes. The file's reader is the input, the lookup table focal. -->
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <rect x="40" y="144" width="184" height="64" rx="6" fill="#f5f5f5"/>
+          <rect x="40" y="144" width="184" height="64" rx="6" fill="rgba(79,93,117,0.10)" stroke="#5a6580"/>
+          <text x="132" y="168" fill="#2d3142" font-size="12" font-weight="600">reader</text>
+          <text x="132" y="184" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkXMLUnstructuredGridReader</text>
+          <text x="132" y="197" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">a .vtu: grid and fields</text>
+
+          <rect x="256" y="144" width="136" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="324" y="168" fill="#2d3142" font-size="12" font-weight="600">warp</text>
+          <text x="324" y="184" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkWarpVector</text>
+          <text x="324" y="197" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">by the displacement</text>
+
+          <rect x="424" y="144" width="160" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="504" y="168" fill="#2d3142" font-size="12" font-weight="600">surface</text>
+          <text x="504" y="184" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkDataSetSurfaceFilter</text>
+          <text x="504" y="197" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">the outer faces</text>
+
+          <rect x="616" y="144" width="144" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="688" y="168" fill="#2d3142" font-size="12" font-weight="600">mapper</text>
+          <text x="688" y="184" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkPolyDataMapper</text>
+          <text x="688" y="197" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">colours by stress</text>
+
+          <rect x="424" y="40" width="160" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="504" y="64" fill="#2d3142" font-size="12" font-weight="600">scalar bar</text>
+          <text x="504" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkScalarBarActor</text>
+          <text x="504" y="93" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">the colours, with values</text>
+
+          <rect x="616" y="40" width="144" height="64" rx="6" fill="#f5f5f5"/>
+          <rect x="616" y="40" width="144" height="64" rx="6" fill="rgba(191,69,32,0.08)" stroke="#bf4520"/>
+          <text x="688" y="64" fill="#2d3142" font-size="12" font-weight="600">lookup table</text>
+          <text x="688" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkLookupTable</text>
+          <text x="688" y="93" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">blue to red</text>
+
+          <rect x="40" y="256" width="144" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="112" y="280" fill="#2d3142" font-size="12" font-weight="600">cut</text>
+          <text x="112" y="296" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkCutter</text>
+          <text x="112" y="309" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">a section by a plane</text>
+
+          <rect x="256" y="256" width="136" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="324" y="280" fill="#2d3142" font-size="12" font-weight="600">contours</text>
+          <text x="324" y="296" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">vtkContourFilter</text>
+          <text x="324" y="309" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">isosurfaces of stress</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,71 @@
+{
+  "Core": [
+    {
+      "name": "vtkCommand",
+      "kind": "class",
+      "cpp": "vtkCommand"
+    },
+    {
+      "name": "vtkCommand_EventIds",
+      "kind": "enum",
+      "cpp": "vtkCommand::EventIds",
+      "header": "vtkCommand.h"
+    },
+    {
+      "name": "vtkObject",
+      "kind": "class",
+      "cpp": "vtkObject"
+    },
+    {
+      "name": "vtkObjectBase",
+      "kind": "class",
+      "cpp": "vtkObjectBase"
+    }
+  ],
+  "Demo": [
+    {
+      "name": "vtkDemoArray",
+      "kind": "class",
+      "cpp": "vtkDemoArray"
+    },
+    {
+      "name": "vtkDemoIdArray",
+      "kind": "class",
+      "cpp": "vtkDemoIdArray"
+    },
+    {
+      "name": "vtkDemoInfo",
+      "kind": "struct",
+      "cpp": "vtkDemoInfo"
+    },
+    {
+      "name": "vtkDemoMode",
+      "kind": "enum",
+      "cpp": "vtkDemoMode",
+      "header": "vtkDemoSource.h"
+    },
+    {
+      "name": "vtkDemoSource",
+      "kind": "class",
+      "cpp": "vtkDemoSource"
+    },
+    {
+      "name": "vtkDemoSource_Notation",
+      "kind": "enum",
+      "cpp": "vtkDemoSource::Notation",
+      "header": "vtkDemoSource.h"
+    },
+    {
+      "name": "vtkDemoTemplate_double",
+      "kind": "class",
+      "cpp": "vtkDemoTemplate",
+      "instance": true
+    },
+    {
+      "name": "vtkDemoTemplate_long_long",
+      "kind": "class",
+      "cpp": "vtkDemoTemplate",
+      "instance": true
+    }
+  ]
+}

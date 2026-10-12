@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 568" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="readme-architecture-title readme-architecture-desc" width="800" height="568">
+        <title id="readme-architecture-title">netvtk-gen's passes</title>
+        <desc id="readme-architecture-desc">Parse reads VTK's install (headers, module properties, DLLs) and config/modules.yaml, Map adds the types netvtk-core's hand-written .i files provide, and Emit writes netvtk-core's wrapper .i files and module headers and the skip logs.</desc>
+        <defs><style>@font-face{font-family:'Geist';font-weight:600;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}
+@font-face{font-family:'Geist Mono';font-weight:400;font-style:normal;src:url(data:font/woff;base64,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) format('woff')}</style><clipPath id="netvtk-card"><rect width="800" height="568" rx="12"/></clipPath>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        </defs><g clip-path="url(#netvtk-card)">
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- Zones, left to right, each starting where its first node sits. -->
+        <g fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8">
+          <rect x="40" y="40" width="200" height="280" rx="8"/>
+          <rect x="316" y="40" width="176" height="360" rx="8"/>
+          <rect x="560" y="228" width="200" height="248" rx="8"/>
+        </g>
+        <g fill="#5a6580" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">
+          <text x="56" y="57">INPUTS</text>
+          <text x="332" y="57">NETVTK-GEN</text>
+          <text x="576" y="245">OUTPUTS</text>
+        </g>
+
+        <!-- Connectors first. -->
+        <g fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)">
+          <path d="M224,104 H331"/>
+          <path d="M224,184 H331"/>
+          <path d="M224,272 H331"/>
+          <path d="M404,208 V239"/>
+          <path d="M404,304 V335"/>
+          <path d="M476,348 H516 Q524,348 524,340 V292 Q524,284 532,284 H575"/>
+          <path d="M476,360 H575"/>
+          <path d="M476,372 H516 Q524,372 524,380 V428 Q524,436 532,436 H575"/>
+        </g>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#5a6580" letter-spacing="0.06em">
+          <rect x="246" y="252" width="64" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="278" y="261" text-anchor="middle">THEIR TYPES</text>
+        </g>
+
+        <g font-family="'Geist', sans-serif" text-anchor="middle">
+          <!-- Inputs. -->
+          <rect x="56" y="72" width="168" height="64" rx="6" fill="#f5f5f5"/>
+          <rect x="56" y="72" width="168" height="64" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)"/>
+          <text x="140" y="94" fill="#2d3142" font-size="12" font-weight="600">VTK 9.7.1 install</text>
+          <text x="140" y="110" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">headers + DLLs,</text>
+          <text x="140" y="122" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">module properties</text>
+
+          <rect x="56" y="160" width="168" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="56" y="160" width="168" height="48" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="140" y="188" fill="#2d3142" font-size="12" font-weight="600">config/modules.yaml</text>
+
+          <rect x="56" y="240" width="168" height="64" rx="6" fill="#f5f5f5"/>
+          <rect x="56" y="240" width="168" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="140" y="268" fill="#2d3142" font-size="12" font-weight="600">netvtk-core</text>
+          <text x="140" y="283" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">hand-written .i</text>
+
+          <!-- The three passes. -->
+          <rect x="332" y="72" width="144" height="136" rx="6" fill="#f5f5f5"/>
+          <rect x="332" y="72" width="144" height="136" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="404" y="136" fill="#2d3142" font-size="12" font-weight="600">Parse</text>
+          <text x="404" y="151" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">ClangSharp/libclang</text>
+
+          <rect x="332" y="240" width="144" height="64" rx="6" fill="#f5f5f5"/>
+          <rect x="332" y="240" width="144" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="404" y="262" fill="#2d3142" font-size="12" font-weight="600">Map</text>
+          <text x="404" y="278" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">TypeRegistry,</text>
+          <text x="404" y="290" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">SignatureMapper</text>
+
+          <rect x="332" y="336" width="144" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="332" y="336" width="144" height="48" rx="6" fill="#ffffff" stroke="#2d3142"/>
+          <text x="404" y="356" fill="#2d3142" font-size="12" font-weight="600">Emit</text>
+          <text x="404" y="371" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">InterfaceWriter</text>
+
+          <!-- Outputs. -->
+          <rect x="576" y="260" width="168" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="576" y="260" width="168" height="48" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75"/>
+          <text x="660" y="280" fill="#2d3142" font-size="12" font-weight="600">netvtk-core</text>
+          <text x="660" y="295" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">src/SWIG_files/wrapper/*.i</text>
+
+          <rect x="576" y="328" width="168" height="64" rx="6" fill="#f5f5f5"/>
+          <rect x="576" y="328" width="168" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75"/>
+          <text x="660" y="350" fill="#2d3142" font-size="12" font-weight="600">netvtk-core</text>
+          <text x="660" y="366" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">src/SWIG_files/headers/</text>
+          <text x="660" y="378" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">*_module.hxx</text>
+
+          <rect x="576" y="412" width="168" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="576" y="412" width="168" height="48" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75"/>
+          <text x="660" y="440" fill="#2d3142" font-size="12" font-weight="600">log/skips/*.txt</text>
+        </g>
+
+        <!-- Legend: the two fills that need decoding. -->
+        <line x1="40" y1="500" x2="760" y2="500" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <g font-family="'Geist Mono', monospace" font-size="8" fill="#5a6580" letter-spacing="0.14em">
+          <text x="40" y="528">LEGEND</text>
+          <rect x="120" y="518" width="20" height="12" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75"/>
+          <text x="148" y="528">GENERATED</text>
+          <rect x="248" y="518" width="20" height="12" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)"/>
+          <text x="276" y="528">FROM VTK</text>
+        </g>
+      </g></svg>

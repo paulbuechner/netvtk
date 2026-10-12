@@ -1,0 +1,31 @@
+{
+  "name": "vtk",
+  "version": "9.7.1",
+  "description": "The Visualization Toolkit (VTK), with the modules NetVtk wraps and VTK's own copies of its third-party libraries",
+  "homepage": "https://vtk.org",
+  "license": "BSD-3-Clause",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ],
+  "features": {
+    "cgns": {
+      "description": "IOCGNSReader: CGNS files (VTK's copies of CGNS and HDF5)"
+    },
+    "exodus": {
+      "description": "IOExodus: Exodus II files (VTK's copies of exodusII, NetCDF and HDF5)"
+    },
+    "opengl": {
+      "description": "OpenGL rendering: always built; for consumers that ask for vtk[opengl]"
+    },
+    "volume": {
+      "description": "RenderingVolume, RenderingVolumeOpenGL2: volume rendering"
+    }
+  }
+}
