@@ -1,1 +1,0 @@
-A pointer VTK hands back through a parameter its size hint names is a `ref` C# array of as many elements as the hint's count holds after the call, where it was a `ref IntPtr`: `vtkCellArray.GetCellAtId(id, ref size, ref points)`, `vtkHexahedron.GetFacePoints(face, ref points)`. A pointer parameter such a hint names is a C# array, setters' too (`vtkGraph.SetEdgePoints`).
