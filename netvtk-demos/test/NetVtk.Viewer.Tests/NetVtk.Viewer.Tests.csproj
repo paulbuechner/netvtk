@@ -1,10 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>The viewer library's parts that need no window (the sample result, documents, the scene's pipeline, the opener), the scene off the screen and, on Linux, the viewer window in a host's X11 window.</Description>
+    <Description>The viewer library's parts that need no window (the sample result, documents, the scene's pipeline, the opener), the scene off the screen and, on Linux and macOS, the viewer window in a host's X11 window or NSView.</Description>
     <TargetFramework>net10.0</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>NetVtk.Viewer.Tests</RootNamespace>
+    <!-- the assembly runs as an app too, with its own Main (CocoaHostingTests' CocoaHost) for the test SDK's empty one -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>

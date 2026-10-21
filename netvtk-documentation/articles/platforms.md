@@ -26,8 +26,9 @@ Rendering needs OpenGL 3.2; [reverse Z](rendering.md#reverse-z) 4.5 or `ARB_clip
 
 - **Windows:** the GPU's driver. `vtkWin32OpenGLDXRenderWindow` renders into a texture an application's Direct3D 11 device shares, with the driver's `WGL_NV_DX_interop`: see [Direct3D](rendering.md#direct3d).
 - **Linux:** the natives are built against X11, GL and EGL (netvtk-core's Dockerfile installs `libgl1-mesa-dev`, `libegl-dev`, `libx11-dev`, `libxext-dev`, `libxi-dev`, `libxt-dev`, `libxcursor-dev`). Without a display, run under Xvfb: the tests render there with Mesa's llvmpipe.
+- **macOS:** VTK's Cocoa render window calls AppKit, which wants the main thread, also off the screen: render there.
 - **No software fallback:** NetVtk renders with the system's OpenGL driver and ships none of its own. CI runs the rendering tests on Linux only, under Xvfb with Mesa's llvmpipe: its Windows and macOS runners have no GPU driver.
-- **In an application's window:** a Win32 child window on Windows, an X11 one on Linux; macOS not yet. See [Rendering and hosting](rendering.md#in-an-applications-window).
+- **In an application's window:** a Win32 child window on Windows, an X11 one on Linux, an NSView on macOS. See [Rendering and hosting](rendering.md#in-an-applications-window).
 
 ## Package sizes
 

@@ -31,7 +31,9 @@ The application makes a child window (an HWND on Windows); VTK's render window d
 
 The [demos](https://github.com/paulbuechner/netvtk/tree/main/netvtk-demos) do all of this in a WPF and an Avalonia 12 viewer that open `.vtu` results; `NetVtk.Viewer` holds the shared part (`VtkViewer`, `ViewerWindow`).
 
-**Linux (X11):** Avalonia's `NativeControlHost` gives an X11 window id. On a display connection the application opens and hands to VTK (`SetDisplayId`), VTK creates the child window there itself (`SetParentId`, `Initialize`, then `GetGenericWindowId()`), with the visual its OpenGL context needs; the application selects the window's mouse and structure events on that connection and passes them on to VTK's interactor, polling from a UI timer. The demos' `X11ViewerWindow` does this; its test draws into a host's X11 window under Xvfb. macOS (an NSView child) isn't done yet.
+**Linux (X11):** Avalonia's `NativeControlHost` gives an X11 window id. On a display connection the application opens and hands to VTK (`SetDisplayId`), VTK creates the child window there itself (`SetParentId`, `Initialize`, then `GetGenericWindowId()`), with the visual its OpenGL context needs; the application selects the window's mouse and structure events on that connection and passes them on to VTK's interactor, polling from a UI timer. The demos' `X11ViewerWindow` does this; its test draws into a host's X11 window under Xvfb.
+
+**macOS:** Avalonia's `NativeControlHost` takes an NSView. The application registers an NSView subclass through the Objective-C runtime and hands an instance to VTK (`SetWindowId`), whose OpenGL context draws into it; the subclass's overrides pass draws, frame size, backing-scale changes and mouse events on to VTK's interactor, in pixels (`setWantsBestResolutionOpenGLSurface:`), with VTK's DPI at 72 a point so text keeps its size on a Retina screen. AppKit calls them on the main thread, where VTK's Cocoa render window must be made and rendered too, even off the screen. The demos' `CocoaViewerView` does this; its test draws into a window's content view, in a process of its own.
 
 ## The rendering thread
 
