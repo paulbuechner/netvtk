@@ -36,3 +36,32 @@ The [demos](https://github.com/paulbuechner/netvtk/tree/main/netvtk-demos) do al
 ## The rendering thread
 
 Render windows, renderers, mappers, actors and textures release OpenGL resources when they go, which needs the thread that renders: create, use and dispose them there, the render window last. For what the garbage collector finalizes, set `VtkFinalizer.Context` on that thread, as `InitializeOnUiThread` above does: the finalizer then posts the releases to it. See [Object lifetimes](lifetimes.md#threads).
+
+## Direct3D
+
+On Windows, `vtkWin32OpenGLDXRenderWindow` renders into a texture an application's Direct3D 11 device shares, for a view Direct3D composes. It needs the driver's `WGL_NV_DX_interop`.
+
+- **The device:** give the window the application's device context (`SetD3DDeviceContext`) before `Initialize`. The device VTK would create asks for Direct3D's debug layer, which fails without Windows' Graphics Tools. `SetAdapterId` takes the adapter's LUID as a `long`.
+- **Locking:** render into the shared framebuffer, and read it, between `Lock` and `Unlock`.
+- **Samples:** the shared textures have one sample: match the window's with `SetSharedTextureSamples`, or render without (`SetMultiSamples(0)`). Changing the window's samples re-creates its render framebuffer: share the new one with `RegisterSharedRenderFramebuffer`, after a render.
+- **Several windows** work in one thread, and a disposed window lets go of the Direct3D device ([VTK's patches](design.md#vtks-patches)).
+- **Share while small:** NVIDIA's driver keeps the memory a texture held when it was registered after being attached to a framebuffer, as `RegisterSharedRenderFramebuffer` registers the render framebuffer's, until the process ends: 25 MiB a window at 1600 x 1000 and 4x MSAA. Share it while the window is 1 x 1, after its first render, then resize: resizing costs nothing more.
+
+## Reverse Z
+
+`SetUseReverseZ(true)` on a render window gives it 32-bit float depth from 1 at the near plane to 0 at the far one: as precise far away as near, whatever the clipping range's ratio, so the near plane can come close to the eye in a large scene.
+
+- It needs OpenGL 4.5 or `ARB_clip_control`; without, the window turns it off and warns.
+- Depth read from the window is reversed (`GetZbufferDataAtPoint`: 0 over nothing), and the renderer's `DisplayToWorld` follows it: a depth read goes back to its world point.
+- Polygon offsets (coincident topology) still keep lines over their surfaces.
+- What computes, compares or converts depth itself follows it: impostor spheres and tubes (`RenderPointsAsSpheres`, `RenderLinesAsTubes`), the sphere and stick mappers, 2-D actors and labels, depth peeling, OIT, SSAO, EDL, depth of field, shadow maps, the skybox, pickers, widgets and the volume mappers. Dual depth peeling, SSAO, EDL, depth of field, point fill, the shadow baker and the CPU volume mappers work on `1 - depth`: right, at conventional precision.
+
+With a clipping range of 0.001 to 100,000, two quads 0.01 apart at 10,000 draw in depth order; 32-bit fixed-point depth draws the far one over the near one. With 0.01 to 100,000, a depth read at 25,000 goes back to its point within 0.5; fixed point is 3,148 off.
+
+## Picking
+
+`vtkHardwareSelector.New()` (the object factory makes OpenGL's) tells what each pixel of a rendered window shows: `SetRenderer`, `SetArea`, `CaptureBuffers()`, then `GetPixelInformation(position)`, a `vtkHardwareSelector_PixelInformation` with `Valid`, `Prop` and `AttributeID`. In a multisampled window its passes render without samples, and the window keeps its render framebuffer ([VTK's patches](design.md#vtks-patches)).
+
+## GPU times
+
+A render window's `GetRenderTimer()`, with `SetLoggingEnabled(true)`, times its renders on the GPU: render until `FrameReady()` (two renders, in netvtk-core's tests), then `PopFirstReadyFrame()` gives a `vtkRenderTimerLog_Frame` whose `Events` hold each event's `Name`, `ElapsedTimeMilliseconds()` and nested `Events`.

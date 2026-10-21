@@ -11,6 +11,7 @@
  *   TYPE* / const TYPE*  parameter  -> TYPE[]           (pinned array, as for numbers: see Types.i)
  *   TYPE / const TYPE&   return     -> TYPE             (via a thread-local buffer, see below)
  *   TYPE&                return     -> ref TYPE         (into the native owner, see References.i)
+ *   TYPE                 field      -> a TYPE property  (a value class's; a copy both ways)
  *
  * Returns never pass a struct by value across the C ABI: on x86 __stdcall the hidden
  * return pointer is part of the export's _Name@N decoration, which .NET computes from
@@ -45,6 +46,12 @@
     global::System.IntPtr ptr = $imcall;$excode
     unsafe { return ref *(CSTYPE*)ptr; }
   }
+// a value class's field: a property, read through the returns' buffer, written as a parameter is
+%typemap(csvarout, excode=SWIGEXCODE2) TYPE, const TYPE& %{
+    get {
+      global::System.IntPtr ptr = $imcall;$excode
+      return global::Vtk.NativeStruct.Read<CSTYPE>(ptr);
+    } %}
 // director callbacks (Directors.i): a parameter reaches the C# override as a copy, a TYPE& read in and written back
 // after; a result comes back through a thread-local buffer (NativeStruct.Stage), which the C++ side copies
 %typemap(directorin) TYPE, const TYPE&, TYPE& "$input = (void*)const_cast< TYPE* >(&$1);"
@@ -63,7 +70,7 @@
 /*
  * Value classes: copyable classes outside vtkObjectBase wrapped as proxies (std::pair instances, VTK's small classes
  * netvtk-gen doesn't make structs). A const& return points into its parent, so it is copied into a proxy that owns the
- * copy.
+ * copy; so is another value class's field of it (a property, written as a copy too).
  */
 %define %netvtk_valueclass(TYPE)
 %typemap(out) const TYPE& %{ $result = (void*)new TYPE(*$1); %}
@@ -72,6 +79,12 @@
     $csclassname ret = (cPtr == global::System.IntPtr.Zero) ? null : new $csclassname(cPtr, true);$excode
     return ret;
   }
+%typemap(csvarout, excode=SWIGEXCODE2) const TYPE& %{
+    get {
+      global::System.IntPtr cPtr = $imcall;
+      $csclassname ret = (cPtr == global::System.IntPtr.Zero) ? null : new $csclassname(cPtr, true);$excode
+      return ret;
+    } %}
 // director callbacks (Directors.i): a parameter reaches the C# override as a copy its proxy owns (a TYPE& borrows, as
 // SWIG's default does); a result is copied from the returned proxy, which Directors.Keep holds until then
 %typemap(directorin) TYPE, const TYPE& "$input = (void*)new TYPE($1);"

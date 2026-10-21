@@ -43,4 +43,15 @@ public class PackageTests
     // Assert: RenderingOpenGL2's factory is registered when its wrapper library loads
     Assert.That(window.GetClassName(), Is.Not.EqualTo("vtkRenderWindow"));
   }
+
+  [Test]
+  [Platform("Win")]
+  public void DXRenderWindow_ComesWithTheWindowsNatives()
+  {
+    // Act (NetVtkWin32: in the Windows runtime packages only)
+    using var window = new vtkWin32OpenGLDXRenderWindow();
+
+    // Assert
+    Assert.That(window.IsA("vtkOpenGLRenderWindow"), Is.EqualTo(1));
+  }
 }

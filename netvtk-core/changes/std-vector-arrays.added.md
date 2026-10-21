@@ -1,0 +1,1 @@
+`std::vector` parameters and returns are C# arrays, copied both ways: numbers, bools, strings, structs, value classes and VTK objects (by pointer or `vtkSmartPointer`). A parameter C++ writes back, by non-const reference or pointer, is a `ref` array that comes back filled (`vtkUniforms.GetUniform`).

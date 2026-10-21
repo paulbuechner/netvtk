@@ -12,11 +12,11 @@ internal static class Types
 {
   /// <summary>A copyable class, which C# gets as a value class (vtkVariant).</summary>
   public static readonly ClassTraits ValueTraits =
-    new(IsTransient: false, IsAbstract: false, HasPublicDestructor: true, IsCopyable: true);
+    new(IsVtkObject: false, IsAbstract: false, HasPublicDestructor: true, IsCopyable: true);
 
   /// <summary>A VTK object, which counts its references (vtkTransform).</summary>
-  public static readonly ClassTraits TransientTraits =
-    new(IsTransient: true, IsAbstract: false, HasPublicDestructor: true, IsCopyable: false);
+  public static readonly ClassTraits VtkObjectTraits =
+    new(IsVtkObject: true, IsAbstract: false, HasPublicDestructor: true, IsCopyable: false);
 
   public static NamedType Class(string name) => new(name, NamedKind.Class, []);
 
@@ -59,10 +59,10 @@ internal static class Types
   public static TypeRegistry Registry()
   {
     var registry = new TypeRegistry();
-    registry.AddClass(new KnownClass("vtkObjectBase", "CommonCore", WrapKind.Transient));
+    registry.AddClass(new KnownClass("vtkObjectBase", "CommonCore", WrapKind.VtkObject));
     registry.AddClass(new KnownClass("vtkVector3d", "CommonDataModel", WrapKind.ValueType));
     registry.AddClass(new KnownClass("vtkVariant", "CommonCore", WrapKind.ValueClass));
-    registry.AddClass(new KnownClass("vtkTransform", "CommonTransforms", WrapKind.Transient));
+    registry.AddClass(new KnownClass("vtkTransform", "CommonTransforms", WrapKind.VtkObject));
     registry.AddClass(new KnownClass("vtkTimerLogScope", "CommonSystem", WrapKind.Plain));
     registry.AddEnum("vtkEventDataDevice", "CommonCore");
     return registry;

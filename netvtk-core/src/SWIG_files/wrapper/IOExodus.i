@@ -62,7 +62,6 @@
 %netvtk_address(%arg(char***))
 %netvtk_address(%arg(float*))
 %netvtk_address(%arg(int*))
-%netvtk_address_ref(%arg(const vtkIdType*))
 %netvtk_keep_construct(vtkExodusIICacheEntry)
 %netvtk_sized_return(int, int, 2)
 
@@ -161,7 +160,9 @@ public:
   vtkCell* const GetCell(vtkIdType cellId);
   void GetCell(vtkIdType cellId, vtkGenericCell* cell);
   int GetCellType(vtkIdType cellId);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetCellPoints(vtkIdType cellId, vtkIdList* ptIds);
   vtkCellIterator* const NewCellIterator();
   void GetPointCells(vtkIdType ptId, vtkIdList* cellIds);
@@ -210,6 +211,10 @@ public:
   vtkExodusIICacheKey();
   vtkExodusIICacheKey(int time, int objType, int objId, int arrId);
   bool match(const vtkExodusIICacheKey& other, const vtkExodusIICacheKey& pattern) const;
+  int Time;
+  int ObjectType;
+  int ObjectId;
+  int ArrayId;
 };
 
 class vtkExodusIICacheEntry {

@@ -18,7 +18,8 @@ namespace Vtk;
 /// plugin's; on .NET Framework also a shadow copy's original): <c>&lt;arch&gt;/</c> (AnyCPU .NET
 /// Framework layout), <c>runtimes/&lt;rid&gt;/native/</c>, and the directory itself. The
 /// netstandard2.0 build has no resolver: it preloads on Windows only and leaves other systems to
-/// .NET's default probing.
+/// .NET's default probing. A library of one platform's classes (NetVtkWin32) is in that platform's
+/// runtime packages only: elsewhere no directory has it, and its classes' first call throws.
 /// </summary>
 internal static class NativeLibraryLoader
 {

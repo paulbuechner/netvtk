@@ -13,7 +13,7 @@ namespace NetVtk.Generator.Mapping;
 internal enum WrapKind
 {
   /// <summary>vtkObjectBase subclass: %vtk_object, the proxy owns a reference.</summary>
-  Transient,
+  VtkObject,
 
   /// <summary>Copyable class: %netvtk_valueclass, const&amp; returns are owned copies.</summary>
   ValueClass,

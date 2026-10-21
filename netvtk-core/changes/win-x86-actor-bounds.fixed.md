@@ -1,0 +1,1 @@
+win-x86: actors show where they are. MSVC's x86 code at /O2 computed `vtkActor`'s bounds wrong (and those of volumes, image slices and assemblies), so VTK culled actors whose bounds weren't symmetric about the origin and reset cameras off the scene; VTK's x86 build is /O2 /Os now.

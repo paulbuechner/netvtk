@@ -169,6 +169,7 @@
 %netvtk_sized_return(int, int, 3)
 %netvtk_sized_return(int, int, 4)
 %netvtk_sized_return(int, int, 6)
+%netvtk_vector(int, int)
 
 enum class vtkVolumeMapper_BlendModes {
   COMPOSITE_BLEND = 0,
@@ -677,6 +678,8 @@ public:
   int GetAutoAdjustSampleDistances();
   void AutoAdjustSampleDistancesOn();
   void AutoAdjustSampleDistancesOff();
+  std::vector< int > GetPorts();
+  void SetPorts(std::vector< int > ports);
   void SetLockSampleDistanceToInputSpacing(int _arg);
   int GetLockSampleDistanceToInputSpacingMinValue();
   int GetLockSampleDistanceToInputSpacingMaxValue();
@@ -994,11 +997,26 @@ public:
 class vtkUnstructuredGridBunykRayCastFunction_Triangle {
 public:
   vtkUnstructuredGridBunykRayCastFunction_Triangle();
+  vtkIdType PointIndex[3];
+  vtkIdType ReferredByTetra[2];
+  double P1X;
+  double P1Y;
+  double P2X;
+  double P2Y;
+  double Denominator;
+  double A;
+  double B;
+  double C;
+  double D;
+  vtkUnstructuredGridBunykRayCastFunction_Triangle* const Next;
 };
 
 class vtkUnstructuredGridBunykRayCastFunction_Intersection {
 public:
   vtkUnstructuredGridBunykRayCastFunction_Intersection();
+  vtkUnstructuredGridBunykRayCastFunction_Triangle* const TriPtr;
+  double Z;
+  vtkUnstructuredGridBunykRayCastFunction_Intersection* const Next;
 };
 
 class vtkUnstructuredGridVolumeRayIntegrator : public vtkObject {

@@ -3,8 +3,9 @@
 # includes its companion after the enums, before the classes.
 
 # the native libraries (NetVtk<Library>) and the VTK modules whose wrappers each holds, in build order: the module set
-# of ../PLAN.md, which netvtk-core's VTK port builds (NETVTK_MODULES and its features cgns, exodus, volume), and IOCore,
-# which the IO modules derive from (vtkWriter: Write, SetInputData)
+# netvtk-core's VTK port builds (NETVTK_MODULES and its features cgns, exodus, volume; netvtk-documentation's
+# articles/modules.md lists it), and IOCore, which the IO modules derive from (vtkWriter: Write, SetInputData); last,
+# one platform's classes (platforms)
 libraries:
   Common: [CommonCore, CommonMath, CommonTransforms, CommonColor, CommonDataModel, CommonExecutionModel]
   Filters: [FiltersCore, FiltersGeneral, FiltersGeometry, FiltersSources, FiltersModeling]
@@ -12,9 +13,15 @@ libraries:
   Rendering: [RenderingCore, RenderingOpenGL2, RenderingAnnotation, RenderingFreeType, RenderingUI, RenderingVolume,
               RenderingVolumeOpenGL2]
   Interaction: [InteractionStyle, InteractionWidgets]
+  Win32: [RenderingOpenGL2Win32]
 
-# one platform's classes: VTK installs the platform's only (these are Windows', which generate runs on), and the output
-# builds everywhere
+# the libraries of one platform's classes, and its OS as .NET's RIDs name it (win, linux, osx): netvtk-core builds and
+# packs them there only. Their C# is in NetVtk.dll with the rest; elsewhere their library is missing, and a call throws.
+platforms:
+  Win32: win
+
+# one platform's classes no module takes (vtk_module, headers below): VTK installs the platform's only (these are
+# Windows', which generate runs on), and the output builds everywhere
 exclude_headers:
   - vtkWin32*Window*.h
   - vtkWindows.h
@@ -41,3 +48,10 @@ modules:
     exclude_methods:
       # declared off Apple, Android and Emscripten only (beside New(), which the abstract class doesn't get)
       - vtkOpenGLRenderWindow::CreateOverrideAttributes
+  # RenderingOpenGL2's Windows render windows, the Direct3D 11 interop one (vtkWin32OpenGLDXRenderWindow) too
+  RenderingOpenGL2Win32:
+    vtk_module: RenderingOpenGL2
+    headers: [vtkWin32OpenGLRenderWindow.h, vtkWin32OpenGLDXRenderWindow.h]
+    exclude_methods:
+      # takes a LUID, which C# has no type for: the companion takes it as a long
+      - vtkWin32OpenGLDXRenderWindow::SetAdapterId

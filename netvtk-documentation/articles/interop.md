@@ -16,12 +16,12 @@ The NetVtk package carries the SWIG interface files it was built from, in its `s
 
 | Path | Holds |
 |---|---|
-| `wrapper/` | one SWIG module per VTK module, 25 |
+| `wrapper/` | one SWIG module per VTK module, 25, and RenderingOpenGL2Win32 (RenderingOpenGL2's Windows-only classes) |
 | `common/` | the typemap library: VTK objects and their references, strings, numbers, streams, directors, exceptions |
 | `extras/` | the hand-written companions: the typed arrays' bulk members, the rendering modules' registration |
 | `headers/` | each module's header and nested-type header |
 | `interop/` | `NetVtkInterop.i`: NetVtk's objects in another SWIG binding |
-| `classes.json`, `modules.json` | every type per VTK module, and the modules per native library |
+| `classes.json`, `modules.json`, `platforms.json` | every type per module, the modules per native library, the libraries of one platform's classes |
 
 ## A binding on NetVtk
 
@@ -30,4 +30,11 @@ A SWIG binding of your own `%include`s `interop/NetVtkInterop.i`, not the typema
 <img class="diagram-light" src="../assets/interop-binding.svg" width="800" height="484" alt="A binding on NetVtk" loading="lazy">
 <img class="diagram-dark" src="../assets/interop-binding-dark.svg" width="800" height="484" alt="A binding on NetVtk" loading="lazy">
 
-The binding's native library compiles against VTK's headers but runs on the VTK libraries `NetVtk.runtime.<rid>` brings: build it against the same VTK. [NetVtk's repository](https://github.com/paulbuechner/netvtk) is a vcpkg registry of VTK's port (`versions/`); pinned at a NetVtk release's commit, with copies of `netvtk-core/vcpkg/triplets` and the features `netvtk-core/vcpkg.json` asks for, vcpkg builds the same VTK, with the same ABI hash, and either binary cache serves the other.
+The binding's native library compiles against VTK's headers but runs on the VTK libraries `NetVtk.runtime.<rid>` brings: build it against the same VTK. [NetVtk's repository](https://github.com/paulbuechner/netvtk) is a vcpkg registry of VTK's port (`versions/`); pinned at a NetVtk release's commit, with copies of `netvtk-core/vcpkg/triplets` and the features `netvtk-core/vcpkg.json` asks for, vcpkg builds the same VTK, with the same ABI hash, and either binary cache serves the other. The port's `opengl` feature is empty (OpenGL is always built), for manifests that ask for `vtk[opengl]`.
+
+The port writes the build's name into VTK's headers, `vtkNetVtkBuild.h`: VTK's version and its port-version, which counts NetVtk's patches (`9.7.1#1`). `%netvtk_build(NAME)` compiles it into the binding as the module class's static `NAME()`; the binding checks it against NetVtk's when it loads, and fails there rather than misbehave on another build:
+
+```csharp
+[ModuleInitializer]
+internal static void CheckVtk() => Vtk.VtkBuild.Require(MyBindingModule.MyBinding_VtkBuild(), "MyBinding");
+```

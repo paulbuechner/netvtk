@@ -1,0 +1,1 @@
+A render window, interactor style or widget representation made before any other rendering class gets OpenGL's implementations from VTK's object factory on .NET: such a window had no GPU timer, and a `vtkBoxRepresentation`'s handles drew nothing.

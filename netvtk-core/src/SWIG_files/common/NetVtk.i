@@ -32,6 +32,10 @@ inline T& NetVtk_Slot()
 // Constructors are wrapped only when declared explicitly: VTK creates its objects through New() (%vtk_new).
 %nodefaultctor;
 
+// A field of a class type (a value class's vector, Std.i) by const reference: its getter copies out of the object, as
+// a const& return does, where SWIG's default hands out a pointer into it.
+%naturalvar;
+
 // Proxies are partial: src/NetVtk/<Module>/<Class>.cs adds hand-written members (vtkObject's C# observers).
 %typemap(csclassmodifiers) SWIGTYPE "public partial class"
 

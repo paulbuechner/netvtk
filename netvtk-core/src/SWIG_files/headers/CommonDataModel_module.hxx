@@ -44,6 +44,7 @@
 #include <vtkSortDataArray.h>
 #include <vtkStdString.h>
 #include <vtkStringToken.h>
+#include <vtkTimeStamp.h>
 #include <vtkTypeInt32Array.h>
 #include <vtkTypeInt64Array.h>
 #include <vtkTypeUInt32Array.h>

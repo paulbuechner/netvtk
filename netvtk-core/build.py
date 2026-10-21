@@ -261,6 +261,21 @@ def native_libraries() -> dict[str, list[str]]:
     return {f"NetVtk{group}": modules for group, modules in json.loads(path.read_text(encoding="utf-8")).items()}
 
 
+def platform_libraries() -> dict[str, str]:
+    """The native libraries of one platform's classes and that platform's OS as .NET's RIDs name it (win, linux, osx),
+    from platforms.json: built and packed there only."""
+    path = SWIG_FILES / "platforms.json"
+    if not path.exists():
+        sys.exit(f"{path.relative_to(ROOT)} missing")
+    return {f"NetVtk{group}": os_name for group, os_name in json.loads(path.read_text(encoding="utf-8")).items()}
+
+
+def library_sources(cxx_dir: Path, library: str, platforms: dict[str, str]) -> Path:
+    """Where generate puts a native library's C++, which CMake builds: cxx/<library>, a platform's library in
+    cxx/<os>/<library>, which CMake builds on that OS only."""
+    return cxx_dir / platforms[library] / library if library in platforms else cxx_dir / library
+
+
 def sift_swig_messages(module: str, messages: str) -> tuple[list[str], int, list[str]]:
     """A module's SWIG messages without the harmless Warning 401 pairs: the lines to print, the pairs left out, and the
     Warning 401 lines left in, each a class SWIG gave C# without its base.
@@ -291,6 +306,7 @@ def cmd_generate(_: argparse.Namespace) -> None:
     swig = swig_executable()
     env = swig_env()
     libraries = native_libraries()
+    platforms = platform_libraries()
     library_of = {module: library for library, modules in libraries.items() for module in modules}
     cxx_dir = GENERATED / "cxx"
     cs_root = GENERATED / "cs"
@@ -298,9 +314,10 @@ def cmd_generate(_: argparse.Namespace) -> None:
         shutil.rmtree(GENERATED)
     cxx_dir.mkdir(parents=True)
 
-    # C++ per library (CMake builds one from each directory), C# per module
+    # C++ per library (CMake builds one from each directory, a platform's on that platform only), C# per module: every
+    # platform's in NetVtk.dll
     for library in libraries:
-        (cxx_dir / library).mkdir()
+        library_sources(cxx_dir, library, platforms).mkdir(parents=True)
 
     def swig_module(module: str) -> tuple[str, subprocess.CompletedProcess[str]]:
         cs_dir = cs_root / module
@@ -312,7 +329,7 @@ def cmd_generate(_: argparse.Namespace) -> None:
                "-I" + str(SWIG_FILES / "wrapper"),
                "-I" + str(SWIG_FILES),  # %include "extras/<Module>.i"
                "-outdir", cs_dir,
-               "-o", cxx_dir / library_of[module] / f"{module}_wrap.cxx",
+               "-o", library_sources(cxx_dir, library_of[module], platforms) / f"{module}_wrap.cxx",
                SWIG_FILES / "wrapper" / f"{module}.i"]
         return module, subprocess.run([str(c) for c in cmd], env=env, capture_output=True, text=True,
                                       encoding="utf-8", errors="replace")

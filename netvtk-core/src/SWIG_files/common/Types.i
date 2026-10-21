@@ -55,6 +55,12 @@
     long ret = $imcall;$excode
     return ret;
   }
+// a value class's field (a property; SWIG's own getter reads an int)
+%typemap(csvarout, excode=SWIGEXCODE2) long, const long& %{
+    get {
+      long ret = $imcall;$excode
+      return ret;
+    } %}
 %typemap(ctype) long& "long long *"
 %typemap(imtype) long& "ref long"
 %typemap(cstype) long& "ref long"
@@ -91,6 +97,11 @@
     ulong ret = $imcall;$excode
     return ret;
   }
+%typemap(csvarout, excode=SWIGEXCODE2) unsigned long, const unsigned long& %{
+    get {
+      ulong ret = $imcall;$excode
+      return ret;
+    } %}
 %typemap(directorin) unsigned long "$input = (unsigned long long)$1;"
 %typemap(csdirectorin) unsigned long "$iminput"
 
@@ -111,6 +122,11 @@
     ulong ret = (ulong)$imcall;$excode
     return ret;
   }
+%typemap(csvarout, excode=SWIGEXCODE2) size_t, const size_t& %{
+    get {
+      ulong ret = (ulong)$imcall;$excode
+      return ret;
+    } %}
 // a member's size_t& return is a ref UIntPtr into the object (References.i)
 %typemap(ctype, out="void *") size_t& "size_t *"
 %typemap(imtype, out="global::System.IntPtr") size_t& "ref global::System.UIntPtr"
@@ -140,6 +156,11 @@
     CSTYPE ret = $imcall;$excode
     return ret;
   }
+%typemap(csvarout, excode=SWIGEXCODE2) TYPE, const TYPE& %{
+    get {
+      CSTYPE ret = $imcall;$excode
+      return ret;
+    } %}
 %enddef
 
 %netvtk_pointer_sized(intptr_t, global::System.IntPtr)
@@ -155,28 +176,57 @@
  *
  *   TYPE* / const TYPE* / TYPE[N]     parameter  -> CSTYPE[]
  *   TYPE[N][M]                        parameter  -> CSTYPE[,]  (row-major, as C#)
+ *   TYPE[N] / const TYPE[N]           a value class's field -> a property of a CSTYPE[] of N, copied both ways (one of
+ *                                     another length doesn't go in); a const one read only
  *
  * char: char* is a byte buffer (const char* stays a string, Strings.i); char16_t: a UTF-16 char[]
  * (const char16_t* is a string); bool: one byte each.
  */
 %define %netvtk_pointer_array(TYPE, CSTYPE)
-%typemap(ctype)  TYPE *, TYPE [ANY], TYPE [], TYPE [ANY][ANY] "TYPE *"
-%typemap(imtype) TYPE *, TYPE [ANY], TYPE [] "[global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.Out] CSTYPE[]"
+%typemap(ctype)  TYPE *, TYPE [], TYPE [ANY][ANY] "TYPE *"
+%typemap(ctype, out="void *") TYPE [ANY] "TYPE *"
+%typemap(imtype) TYPE *, TYPE [] "[global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.Out] CSTYPE[]"
+%typemap(imtype, out="global::System.IntPtr") TYPE [ANY] "[global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.Out] CSTYPE[]"
 %typemap(imtype) TYPE [ANY][ANY] "[global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.Out] CSTYPE[,]"
 %typemap(cstype) TYPE *, TYPE [ANY], TYPE [] "CSTYPE[]"
 %typemap(cstype) TYPE [ANY][ANY] "CSTYPE[,]"
-%typemap(csin)   TYPE *, TYPE [ANY], TYPE [], TYPE [ANY][ANY] "$csinput"
+%typemap(csin)   TYPE *, TYPE [], TYPE [ANY][ANY] "$csinput"
+%typemap(csin)   TYPE [ANY] "global::Vtk.NativeArrays.Checked($csinput, $1_dim0, \"$csinput\")"
 %typemap(in)     TYPE *, TYPE [ANY], TYPE [], TYPE [ANY][ANY] %{ $1 = ($1_ltype)$input; %}
+%typemap(out)    TYPE [ANY] %{ $result = (void*)$1; %}
+// a field's getter expands csout too, whose default would make an opaque class of the pointer
+%typemap(csout, excode=SWIGEXCODE) TYPE [ANY] {
+    global::System.IntPtr ptr = $imcall;$excode
+    return global::Vtk.NativeArrays.CopyOut<CSTYPE>(ptr, $1_dim0);
+  }
+%typemap(csvarout, excode=SWIGEXCODE2) TYPE [ANY] %{
+    get {
+      global::System.IntPtr ptr = $imcall;$excode
+      return global::Vtk.NativeArrays.CopyOut<CSTYPE>(ptr, $1_dim0);
+    } %}
 %enddef
 
 %define %netvtk_const_pointer_array(TYPE, CSTYPE)
-%typemap(ctype)  const TYPE *, const TYPE [ANY], const TYPE [], const TYPE [ANY][ANY] "TYPE *"
-%typemap(imtype) const TYPE *, const TYPE [ANY], const TYPE [] "[global::System.Runtime.InteropServices.In] CSTYPE[]"
+%typemap(ctype)  const TYPE *, const TYPE [], const TYPE [ANY][ANY] "TYPE *"
+%typemap(ctype, out="void *") const TYPE [ANY] "TYPE *"
+%typemap(imtype) const TYPE *, const TYPE [] "[global::System.Runtime.InteropServices.In] CSTYPE[]"
+%typemap(imtype, out="global::System.IntPtr") const TYPE [ANY] "[global::System.Runtime.InteropServices.In] CSTYPE[]"
 %typemap(imtype) const TYPE [ANY][ANY] "[global::System.Runtime.InteropServices.In] CSTYPE[,]"
 %typemap(cstype) const TYPE *, const TYPE [ANY], const TYPE [] "CSTYPE[]"
 %typemap(cstype) const TYPE [ANY][ANY] "CSTYPE[,]"
 %typemap(csin)   const TYPE *, const TYPE [ANY], const TYPE [], const TYPE [ANY][ANY] "$csinput"
 %typemap(in)     const TYPE *, const TYPE [ANY], const TYPE [], const TYPE [ANY][ANY] %{ $1 = ($1_ltype)$input; %}
+%typemap(out)    const TYPE [ANY] %{ $result = (void*)$1; %}
+// a field's getter expands csout too, whose default would make an opaque class of the pointer
+%typemap(csout, excode=SWIGEXCODE) const TYPE [ANY] {
+    global::System.IntPtr ptr = $imcall;$excode
+    return global::Vtk.NativeArrays.CopyOut<CSTYPE>(ptr, $1_dim0);
+  }
+%typemap(csvarout, excode=SWIGEXCODE2) const TYPE [ANY] %{
+    get {
+      global::System.IntPtr ptr = $imcall;$excode
+      return global::Vtk.NativeArrays.CopyOut<CSTYPE>(ptr, $1_dim0);
+    } %}
 %enddef
 
 %define %netvtk_pointer_arrays(TYPE, CSTYPE)
@@ -221,7 +271,7 @@
  * Addresses: IntPtr, for void* and for pointers C# can't type (a pointer the callee may keep, a function,
  * a pointer to a pointer).
  *
- *   void* / const void*                  parameter, return  -> IntPtr
+ *   void* / const void*                  parameter, return, a value class's field  -> IntPtr
  *   NetVtk_Address< T >                  parameter, return  -> IntPtr; converts to and from T in the wrapper
  *   NetVtk_AddressRef< T >               parameter          -> ref IntPtr; binds to a T& (T*&: the callee may replace it)
  *
@@ -238,6 +288,12 @@
     global::System.IntPtr ret = $imcall;$excode
     return ret;
   }
+// a value class's field (netvtk-gen declares any pointer C# can't type void*, read only unless it is one)
+%typemap(csvarout, excode=SWIGEXCODE2) void *, const void * %{
+    get {
+      global::System.IntPtr ret = $imcall;$excode
+      return ret;
+    } %}
 // director callbacks (Directors.i): an address reaches the C# override as it is (vtkCommand::Execute's callData)
 %typemap(directorin) void *, const void * "$input = (void *)$1;"
 %typemap(csdirectorin) void *, const void * "$iminput"
@@ -332,6 +388,11 @@ template <class T, int N> struct NetVtk_ArrayRef;
     char ret = (char)$imcall;$excode
     return ret;
   }
+%typemap(csvarout, excode=SWIGEXCODE2) char16_t, const char16_t& %{
+    get {
+      char ret = (char)$imcall;$excode
+      return ret;
+    } %}
 %typemap(ctype)  char16_t& "char16_t *"
 %typemap(imtype) char16_t& "ref ushort"
 %typemap(cstype) char16_t& "ref char"

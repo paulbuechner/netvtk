@@ -3,6 +3,8 @@
 
 #include "NetVtkRuntime.hxx"
 
+#include <vtkNetVtkBuild.h>
+
 #include <cstring>
 
 namespace
@@ -31,4 +33,9 @@ void NetVtk_CopyMemory(void* theTarget, const void* theSource, size_t theSize)
   {
     std::memcpy(theTarget, theSource, theSize);
   }
+}
+
+const char* NetVtk_VtkBuild()
+{
+  return NETVTK_VTK_BUILD;
 }

@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Paul=20B=C3=BCchner?= <45827409+paulbuechner@users.noreply.github.com>
+Date: Sat, 17 Oct 2026 21:03:38 +0200
+Subject: [PATCH] vtkWin32OpenGLDXRenderWindow: Make the window's context
+ current for interop, and register nothing without an interop device
+
+WGL_NV_DX_interop works on the current OpenGL context: wglDXRegisterObjectNV
+takes a texture name of the current context, and a lock belongs to the
+context that took it. Lock, Unlock, RegisterSharedTexture and
+UnregisterSharedTexture used whichever context was current. With two DX
+windows in one thread, resizing one (SetSize registers its shared textures
+again) while the other's context was current registered its texture name in
+the other context, where the name is another texture: that texture took the
+Direct3D texture's storage, and the other window rendered wrong or the
+process crashed.
+
+They now make the window's context current first, as Start does before a
+render. UpdateTextures (SetSize, SetColorTextureFormat) goes through
+UnregisterSharedTexture and RegisterSharedTexture.
+
+RegisterSharedTexture went on after Initialize opened no interop device (a
+driver without WGL_NV_DX_interop, or no Direct3D device) and called the
+extension's functions, which such a driver doesn't have: the process
+crashed. It reports an error and registers nothing instead.
+---
+ Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx b/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx
+index c784412..b4eefed 100644
+--- a/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx
++++ b/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx
+@@ -223,6 +223,9 @@ void vtkWin32OpenGLDXRenderWindow::Lock()
+     return;
+   }
+ 
++  // The lock belongs to the current OpenGL context: make it this window's
++  this->MakeCurrent();
++
+   std::array<HANDLE, 2> sharedTextureHandles = { this->Impl->ColorTexture.Handle,
+     this->Impl->DepthTexture.Handle };
+ 
+@@ -242,6 +245,9 @@ void vtkWin32OpenGLDXRenderWindow::Unlock()
+     return;
+   }
+ 
++  // The lock belongs to this window's OpenGL context
++  this->MakeCurrent();
++
+   std::array<HANDLE, 2> sharedTextureHandles = { this->Impl->ColorTexture.Handle,
+     this->Impl->DepthTexture.Handle };
+ 
+@@ -277,6 +283,16 @@ void vtkWin32OpenGLDXRenderWindow::RegisterSharedTexture(unsigned int colorId, u
+     this->Initialize();
+   }
+ 
++  // Without WGL_NV_DX_interop, or a Direct3D device, Initialize opened no interop device
++  if (!this->Impl->DeviceHandle)
++  {
++    vtkErrorMacro("No interop device: the driver lacks WGL_NV_DX_interop, or no Direct3D device.");
++    return;
++  }
++
++  // colorId and depthId name textures in this window's OpenGL context
++  this->MakeCurrent();
++
+   // Make sure the shared textures use the same number of multisamples
+   int samples = -1;
+   glGetTextureLevelParameteriv(colorId, 0, GL_TEXTURE_SAMPLES, &samples);
+@@ -335,6 +351,9 @@ void vtkWin32OpenGLDXRenderWindow::UnregisterSharedTexture()
+     return;
+   }
+ 
++  // The shared textures are registered in this window's OpenGL context
++  this->MakeCurrent();
++
+   wglDXUnregisterObjectNV(this->Impl->DeviceHandle, this->Impl->ColorTexture.Handle);
+   this->Impl->ColorTexture.Id = 0;
+   this->Impl->ColorTexture.Handle = nullptr;

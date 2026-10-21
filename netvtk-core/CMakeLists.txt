@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 
 # NetVtk<Group>: the SWIG C# wrappers of a group of VTK modules (build/generated/cxx/NetVtk<Group>) linked against VTK from
-# vcpkg, one library each (a Windows DLL exports at most 65535 functions). NetVtkRuntime: the hand-written src/Native.
+# vcpkg, one library each (a Windows DLL exports at most 65535 functions); one platform's in build/generated/cxx/<os>.
+# NetVtkRuntime: the hand-written src/Native.
 # Driven by build.py:  python build.py native --triplet x64-windows
 project(netvtk-core LANGUAGES CXX)
 
@@ -19,7 +20,17 @@ endif()
 find_package(VTK ${NETVTK_VTK_VERSION} EXACT CONFIG REQUIRED)
 message(STATUS "VTK ${VTK_VERSION}: ${VTK_LIBRARIES}")
 
-file(GLOB NETVTK_LIBRARY_DIRS LIST_DIRECTORIES true CONFIGURE_DEPENDS "${NETVTK_GENERATED_DIR}/NetVtk*")
+# A library of one platform's classes (src/SWIG_files/platforms.json) is in a folder named after the platform's OS, as
+# .NET's RIDs name it (build.py generate puts it there): built on that platform only, NetVtkWin32 on Windows.
+if(WIN32)
+  set(NETVTK_OS win)
+elseif(APPLE)
+  set(NETVTK_OS osx)
+else()
+  set(NETVTK_OS linux)
+endif()
+file(GLOB NETVTK_LIBRARY_DIRS LIST_DIRECTORIES true CONFIGURE_DEPENDS "${NETVTK_GENERATED_DIR}/NetVtk*"
+     "${NETVTK_GENERATED_DIR}/${NETVTK_OS}/NetVtk*")
 if(NOT NETVTK_LIBRARY_DIRS)
   message(FATAL_ERROR "No SWIG output in ${NETVTK_GENERATED_DIR}; run: python build.py generate")
 endif()
@@ -45,10 +56,13 @@ function(netvtk_library name)
   install(TARGETS ${name} RUNTIME DESTINATION . LIBRARY DESTINATION .)
 endfunction()
 
-# no VTK: the director failures every wrapper library shares (Directors.i) and the memory streams of Streams.i
+# no VTK library: the director failures every wrapper library shares (Directors.i), the memory streams of Streams.i and
+# the VTK build's name
 netvtk_library(NetVtkRuntime ${CMAKE_SOURCE_DIR}/src/Native/NetVtkRuntime.cxx ${CMAKE_SOURCE_DIR}/src/Native/NetVtkStreams.cxx)
 target_compile_definitions(NetVtkRuntime PRIVATE NETVTK_RUNTIME_BUILD)
 target_include_directories(NetVtkRuntime PUBLIC ${CMAKE_SOURCE_DIR}/src/Native)
+# vtkNetVtkBuild.h, the VTK build's name (Vtk.VtkBuild): VTK's headers, none of its libraries
+target_include_directories(NetVtkRuntime PRIVATE $<TARGET_PROPERTY:VTK::CommonCore,INTERFACE_INCLUDE_DIRECTORIES>)
 
 foreach(dir ${NETVTK_LIBRARY_DIRS})
   get_filename_component(library ${dir} NAME)

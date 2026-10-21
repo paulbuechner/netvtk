@@ -18,9 +18,10 @@ namespace NetVtk.Generator;
 /// <summary>
 /// <c>netvtk-gen generate</c>: parse the configured VTK modules, map them to netvtk-core's contract
 /// and write <c>src/SWIG_files/{wrapper,headers}</c> plus <c>src/SWIG_files/modules.json</c> (the
-/// modules per native library) and <c>classes.json</c> (the types per module, for the
-/// documentation's class index). Modules a run doesn't write (another run's, or hand-written ones)
-/// tell it through their .i files which types exist.
+/// modules per native library), <c>platforms.json</c> (the libraries of one platform's classes)
+/// and <c>classes.json</c> (the types per module, for the documentation's class index). Modules a
+/// run doesn't write (another run's, or hand-written ones) tell it through their .i files which
+/// types exist.
 /// </summary>
 internal static class Generate
 {
@@ -83,10 +84,12 @@ internal static class Generate
     var outputs = new Outputs(check);
     var namespaces = WriteModules(models, workspace, registry, paths, outputs, output);
 
-    // the modules build.py runs SWIG over, per native library, in the config's order
+    // the modules build.py runs SWIG over, per native library, in the config's order; and the
+    // libraries it builds on one platform only
     outputs.Emit(Path.Combine(paths.SwigFiles, "modules.json"),
                  ModulesJson(workspace.Configured, m => config.LibraryOf(m)!,
                              [.. config.Libraries.Keys]));
+    outputs.Emit(Path.Combine(paths.SwigFiles, "platforms.json"), PlatformsJson(config));
     // the types each package gives C#, which the documentation links to VTK's reference; a run over
     // some packages keeps the others' entries
     var classIndex = Path.Combine(paths.SwigFiles, "classes.json");
@@ -191,10 +194,12 @@ internal static class Generate
         yield return $"{package}: no class {name}";
       }
 
-      // Class::Method (a constructor as Class::Class), or Namespace::Function
+      // Class::Method (a constructor as Class::Class, a value class's field as Class::Field), or
+      // Namespace::Function
       HashSet<string> members =
       [
         .. model.Classes.SelectMany(c => c.Methods.Select(m => $"{c.Name}::{m.Name}")
+                                      .Concat((c.Fields ?? []).Select(f => $"{c.Name}::{f.Name}"))
                                       .Append($"{c.Name}::{c.Name}")),
         .. model.NamespaceFunctions.Select(f => $"{f.Namespace}::{f.Name}")
       ];
@@ -334,6 +339,18 @@ internal static class Generate
     return "{\n" + string.Join(",\n", groups) + "\n}\n";
   }
 
+  // the libraries of one platform's classes and that platform's OS (.NET's RID names: win, linux,
+  // osx), which netvtk-core builds and packs there only; in the config's library order
+  internal static string PlatformsJson(GeneratorConfig config)
+  {
+    List<string> entries =
+    [
+      .. config.Libraries.Keys.Where(config.Platforms.ContainsKey)
+        .Select(l => $"  \"{l}\": \"{config.Platforms[l]}\"")
+    ];
+    return entries.Count == 0 ? "{}\n" : "{\n" + string.Join(",\n", entries) + "\n}\n";
+  }
+
   /// <summary>
   /// A class template instance a signature uses is a class of its first user, in package order, the
   /// only one that keeps it: an instance several packages use is one class. An alias anywhere names
@@ -403,7 +420,7 @@ internal static class Generate
         var c = model.Classes.FirstOrDefault(c => c.Name == name)
                 ?? throw new InvalidOperationException(
                   $"{model.Name}: director {name} is not a class of the package");
-        if (!c.Traits.IsTransient)
+        if (!c.Traits.IsVtkObject)
         {
           throw new InvalidOperationException($"{model.Name}: director {name} is not a VTK object");
         }

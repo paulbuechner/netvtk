@@ -4,5 +4,8 @@
   ],
   "Demo": [
     "Demo"
+  ],
+  "Win32": [
+    "DemoWin32"
   ]
 }

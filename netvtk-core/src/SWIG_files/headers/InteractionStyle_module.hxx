@@ -12,6 +12,7 @@
 #include <vtkObjectBase.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkVector.h>
 #include <vtkViewport.h>
 #include <vtkCameraManipulator.h>
 #include <vtkInteractorStyleDrawPolygon.h>

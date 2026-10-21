@@ -18,6 +18,8 @@
  *   T* return of a member        -> a proxy that borrows the object and keeps the owner's proxy alive
  *   T* const return              -> a proxy that borrows the object: netvtk-gen spells the returns of
  *                                   functions without an object so (static members, namespace functions)
+ *   T* const field               -> a value class's: read only, a proxy that borrows the object and keeps
+ *                                   the owner's proxy alive
  *   T*& parameter                -> ref T: the callee may replace the pointer; a new one comes back as a
  *                                   borrowing proxy (VTK objects: VtkObjects.i, which own a reference)
  */
@@ -72,6 +74,15 @@
     $csclassname ret = (cPtr == global::System.IntPtr.Zero) ? null : new $csclassname(cPtr, false);$excode
     return ret;
   }
+// a value class's field of a pointer to a class, read only (netvtk-gen declares it T* const): the object lives in the
+// field's owner, as a member's does
+%typemap(csvarout, excode=SWIGEXCODE2) SWIGTYPE *const %{
+    get {
+      global::System.IntPtr cPtr = $imcall;
+      $csclassname ret = (cPtr == global::System.IntPtr.Zero) ? null : new $csclassname(cPtr, false);$excode
+      if (ret != null) ret.netvtkOwner = this;
+      return ret;
+    } %}
 
 /*
  * What a native object keeps a reference to stays alive with its proxy (NativeKeep), for that declaration only:

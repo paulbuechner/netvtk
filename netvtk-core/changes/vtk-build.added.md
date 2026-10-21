@@ -1,0 +1,1 @@
+`Vtk.VtkBuild.Current` names the VTK build NetVtk's natives carry (`9.7.1#1`: VTK's version and the port-version that counts NetVtk's patches), which the port also writes into VTK's headers (`vtkNetVtkBuild.h`). A binding on NetVtk compiles it in with NetVtkInterop.i's `%netvtk_build` and checks it with `VtkBuild.Require` when it loads.

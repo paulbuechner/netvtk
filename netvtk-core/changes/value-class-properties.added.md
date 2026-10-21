@@ -1,0 +1,1 @@
+The public fields of VTK's value classes are properties: numbers, enums and strings to read and write, VTK objects and vectors of value classes to read. `vtkHardwareSelector_PixelInformation` tells what a pixel shows after `CaptureBuffers`, and `vtkRenderTimerLog_Frame.Events` gives a window's GPU times.

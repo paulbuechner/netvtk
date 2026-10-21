@@ -1,6 +1,6 @@
 # netvtk
 
-Monorepo of NetVtk, the SWIG-generated C# bindings for VTK 9.7.1. netvtk-core and netvtk-generator have their own `CLAUDE.md`; read it before working there. The demos are below. The roadmap, decisions and risks are in `PLAN.md`: keep it current as phases finish, and move what becomes fact into the `CLAUDE.md` files.
+Monorepo of NetVtk, the SWIG-generated C# bindings for VTK 9.7.1. netvtk-core and netvtk-generator have their own `CLAUDE.md`; read it before working there. The demos are below. Open work (unfinished items, known faults, risks, undecided questions) is in `plan/`, a file per topic: it holds only what's open. When an item is done, its lasting facts go into the documentation (`netvtk-documentation/articles/`: decisions into `design.md`) or the `CLAUDE.md` files, and the item leaves its file; a topic with nothing left loses its file.
 
 NetVtk names no project that builds on it: bindings on NetVtk reference it (its package, `swig/interop/NetVtkInterop.i`, the vcpkg registry in `versions/`), never the other way round.
 
@@ -28,7 +28,7 @@ NetVtk names no project that builds on it: bindings on NetVtk reference it (its 
 ```bash
 cd netvtk-documentation
 dotnet tool restore                 # docfx, pinned in dotnet-tools.json
-python classes.py                   # classes/*.md from netvtk-core's modules.json and classes.json (gitignored)
+python classes.py                   # classes/*.md from netvtk-core's modules.json, platforms.json and classes.json (gitignored)
 python classes.py --check           # the same, then every link fetched: fails on a page VTK's reference lacks
 python diagrams.py --png <name>     # assets/<name>.svg, <name>-dark.svg from assets/<name>.html (here, netvtk-core, -generator); PNGs in log/diagrams
 dotnet test samples -c Release      # the examples, on netvtk-core's packed NetVtk (build.py pack first)

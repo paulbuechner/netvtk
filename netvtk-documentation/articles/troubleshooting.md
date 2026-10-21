@@ -7,6 +7,7 @@
 - Windows: install the [Visual C++ 2015-2022 runtime](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist) for the process's architecture.
 - Check that the platform has natives: win-x64, win-x86, linux-x64, osx-arm64. See [Platforms](platforms.md).
 - .NET Framework: the build copies the natives into `x64\` and `x86\` next to the app; check they're there.
+- `NetVtkWin32`, inside a `TypeInitializationException`, off Windows: its classes, the Windows render windows, are Windows' only.
 
 **`BadImageFormatException`**
 
@@ -57,3 +58,15 @@ The garbage collector sees only the proxies, not the data behind them. Dispose l
 **Loops over points or values are slow**
 
 Each call crosses into native code. Copy arrays in bulk (`ToArray()`, `ToDoubleArray()`, `FromArray()`, `AsSpan()` on .NET 6+): [Data and arrays](data.md#bulk-copies).
+
+Measured on win-x64, .NET 10:
+
+| Operation | Time |
+|---|---|
+| a wrapped call | 14 ns |
+| a proxy for an existing object | 300 ns |
+| `new vtkPoints()` and `Dispose()` | 5,000 ns, VTK's own factory and array |
+| `CopyFrom`, 10 million doubles | 7 ms |
+| `FromArray`, `ToArray`, 10 million doubles | about 45 ms, most of it the fresh memory's page faults |
+| summing 10 million doubles through `AsSpan()` | 11 ms |
+| `ToDoubleArray()`, 10 million doubles or floats | 18 ms, 12.5 ms |

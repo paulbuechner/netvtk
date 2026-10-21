@@ -27,10 +27,25 @@ internal sealed class Workspace
     Config = GeneratorConfig.Load(configPath);
     Source = new VtkSource(vtkPrefix);
     MsvcEnvironment.Ensure();
-    foreach (var module in Config.Generate.Where(m => !Source.Has(m)))
+    foreach (var module in Config.Generate.Where(m => !Source.Has(Config.VtkModuleOf(m))))
     {
+      if (Config.For(module).VtkModule is { } vtkModule)
+      {
+        throw new KeyNotFoundException(
+          $"config: {module}: VTK has no module {vtkModule} (vtk_module)");
+      }
+
       throw new KeyNotFoundException(
         $"config: VTK has no module {module} (the port's NETVTK_MODULES builds it?)");
+    }
+
+    // a module of another's headers that takes none (VTK renamed them, or doesn't install them
+    // here)
+    foreach (var module in Config.Generate.Where(m => Config.For(m).VtkModule is not null
+                                                      && Headers(m).Headers.Count == 0))
+    {
+      throw new InvalidDataException(
+        $"config: {module}: no header of {Config.VtkModuleOf(module)} matches its headers");
     }
 
     Configured = [.. Config.Generate];
@@ -51,7 +66,7 @@ internal sealed class Workspace
   public List<string> Expand(IEnumerable<string> entries) =>
   [
     .. entries.SelectMany(e => Config.Libraries.TryGetValue(e, out var modules) ? modules :
-                            Source.Has(e) ? [e] :
+                            Source.Has(e) || Config.Generate.Contains(e) ? [e] :
                             throw new KeyNotFoundException(
                               $"{e}: neither a configured library nor a VTK module"))
       .Distinct()
@@ -59,11 +74,20 @@ internal sealed class Workspace
 
   /// <summary>
   /// The headers a module's parse includes, and the ones <c>exclude_headers</c> leaves out (one
-  /// platform's classes: VTK installs the platform's only, and the output builds everywhere).
+  /// platform's classes: VTK installs the platform's only, and the output builds everywhere). A
+  /// module of another's headers (<c>vtk_module</c>) parses those its <c>headers</c> take, which
+  /// their own module leaves out, unlogged: C# has them.
   /// </summary>
   public (IReadOnlyList<string> Headers, IReadOnlyList<string> Excluded) Headers(string module)
   {
-    var all = Source.Headers(module);
+    if (Config.For(module) is { VtkModule: { } vtkModule, Headers: var patterns })
+    {
+      return ([
+        .. Source.Headers(vtkModule).Where(h => patterns.Any(p => GeneratorConfig.Matches(p, h)))
+      ], []);
+    }
+
+    List<string> all = [.. Source.Headers(module).Where(h => !Config.IsTakenHeader(module, h))];
     return ([.. all.Where(h => !Config.IsExcludedHeader(h))],
       [.. all.Where(Config.IsExcludedHeader)]);
   }

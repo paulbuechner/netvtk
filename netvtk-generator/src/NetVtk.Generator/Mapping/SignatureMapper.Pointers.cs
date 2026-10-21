@@ -59,6 +59,9 @@ internal sealed partial class SignatureMapper
         return Address(Opaque(pointer));
       case NamedType { Kind: NamedKind.Class } n when IsProxied(n):
         return PointedClass(n, pointer.Spelling);
+      // the callee writes the caller's vector, if any: a ref of a C# array, null for nullptr
+      case NamedType { Name: "std::vector", IsConst: false } vector:
+        return Vector(vector, "", "*", writesBack: true);
       case NamedType { Name: var name } when name.StartsWith("std::", StringComparison.Ordinal):
         return TypeMapping.Skipped($"raw pointer {p.Spelling}: std type {name}");
       case BuiltinType or NamedType or PointerType or FunctionType:
@@ -172,6 +175,23 @@ internal sealed partial class SignatureMapper
   [GeneratedRegex(@"^vtk::sizehint\((\d+)\)$")]
   private static partial Regex SizeHint();
 
+  /// <summary>
+  /// A <c>T*&amp;</c> parameter of numbers a VTK size hint names (<c>VTK_SIZEHINT(pts, npts)</c>),
+  /// through which C++ hands back a pointer: a ref of a C# array of <paramref name="size"/>
+  /// elements, copied right after the call (<see cref="SizedReference"/>); null for any other
+  /// parameter.
+  /// </summary>
+  /// <param name="size">The count as the wrapper spells it.</param>
+  public MappedType? SizedParameter(CppType type, string size) =>
+    registry.Resolve(type) is ReferenceType
+    {
+      IsRValue: false, Referee: PointerType { Pointee: BuiltinType { Name: not "bool" } b } p
+    }
+    && ArrayElements.TryGetValue(b.Name, out var cs)
+      ? new MappedType($"{(p with { Const = false }).Spelling}&", [], $"ref {cs}[]", $"ref {cs}[]",
+                       Sized: new SizedReference(b.Spelling, cs, size))
+      : null;
+
   // a returned pointer: a class is a proxy (References.i: a member's borrows from the object and
   // keeps its proxy alive, spelled T*; one without an object doesn't, T* const; VtkObjects.i: a VTK
   // object's owns a reference, T* const, since constructors return T*), a string a string,
@@ -183,7 +203,7 @@ internal sealed partial class SignatureMapper
   private TypeMapping ReturnedPointer(PointerType p, bool member, bool newInstance = false)
   {
     var owned = p.Pointee is NamedType { TemplateArguments.Count: 0 } target
-                && registry.Class(target.Name) is { Kind: WrapKind.Transient };
+                && registry.Class(target.Name) is { Kind: WrapKind.VtkObject };
     var pointer = p with { Const = (!member || owned) && !(owned && newInstance) };
     switch (p.Pointee)
     {
@@ -206,6 +226,9 @@ internal sealed partial class SignatureMapper
       case NamedType { Kind: NamedKind.Class } n when StreamClass(n) is { } stream:
         return TypeMapping.Skipped(
           $"returns a native {stream}: Streams.i lends C# streams to VTK for a call and has no C# view of VTK's");
+      // a copy of the vector, null for nullptr
+      case NamedType { Name: "std::vector", IsConst: false } vector:
+        return Vector(vector, "", "*", writesBack: false);
       case NamedType { Name: var name } when name.StartsWith("std::", StringComparison.Ordinal):
         return TypeMapping.Skipped($"returns raw pointer {p.Spelling}: std type {name}");
       case BuiltinType or NamedType or PointerType or FunctionType:

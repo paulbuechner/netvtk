@@ -10,6 +10,10 @@
  *   a C# constructor          calls T::New() (%vtk_new), whose reference the proxy takes
  *   any other returned T*     the wrapper adds one for the proxy: netvtk-gen spells these returns T* const
  *   a callback's parameter    the same, for the override's proxy (directors)
+ *   a value class's field     the same, read only: netvtk-gen spells it T* const; a vtkSmartPointer<T> one is read and
+ *                             written
+ *   std::vector<T*>, std::vector<vtkSmartPointer<T>>
+ *                             a C# array (Std.i), each element's proxy with a reference of its own
  *   Dispose, the finalizer    drop the proxy's reference (UnRegister, in place of a destructor)
  *
  * VTK counts atomically, so the finalizer thread may release. It may delete an object there, too, which a rendering
@@ -50,6 +54,14 @@ template <class T> class vtkSmartPointer;
     $csclassname ret = (cPtr == global::System.IntPtr.Zero) ? null : new $csclassname(cPtr, true);$excode
     return ret;
   }
+// a value class's object field, which netvtk-gen declares T* const (a read-only property): its getter's object gets a
+// reference for the proxy, as a returned one does (the out typemap above)
+%typemap(csvarout, excode=SWIGEXCODE2) TYPE *const, const TYPE *const %{
+    get {
+      global::System.IntPtr cPtr = $imcall;
+      $csclassname ret = (cPtr == global::System.IntPtr.Zero) ? null : new $csclassname(cPtr, true);$excode
+      return ret;
+    } %}
 %typemap(directorin) TYPE *, const TYPE * %{
   { TYPE* p = const_cast< TYPE* >($1); if (p) p->Register(nullptr); $input = (void*)p; }
 %}
@@ -77,6 +89,14 @@ template <class T> class vtkSmartPointer;
     TYPE ret = (cPtr == global::System.IntPtr.Zero) ? null : new TYPE(cPtr, true);$excode
     return ret;
   }
+// a value class's smart pointer field: a property, read as a returned one, written as a parameter (the field counts a
+// reference)
+%typemap(csvarout, excode=SWIGEXCODE2) const vtkSmartPointer< TYPE >& %{
+    get {
+      global::System.IntPtr cPtr = $imcall;
+      TYPE ret = (cPtr == global::System.IntPtr.Zero) ? null : new TYPE(cPtr, true);$excode
+      return ret;
+    } %}
 
 // vtkSmartPointer<TYPE>& and TYPE*& (in/out) -> ref TYPE: the slot carries the caller's object in; one the callee put in
 // its place comes back with a reference of its own for its new proxy. Otherwise the variable keeps its proxy.
@@ -118,6 +138,74 @@ template <class T> class vtkSmartPointer;
 %extend TYPE {
   TYPE() { return TYPE::New(); }
 }
+%enddef
+
+/*
+ * A vector of VTK objects, by pointer or vtkSmartPointer (Std.i's vectors): in, the objects whose addresses C# passes
+ * (null ones nullptr); out, the objects, each with a reference for its proxy.
+ */
+%{
+template <class T>
+void NetVtk_ObjectsIn(const void* theBlock, std::vector<T*>& theVector)
+{
+  theVector.resize(NetVtk_BlockCount(theBlock));
+  for (std::size_t i = 0; i < theVector.size(); ++i)
+  {
+    theVector[i] = static_cast<T*>(NetVtk_BlockAddress(theBlock, i));
+  }
+}
+
+template <class T>
+void NetVtk_ObjectsIn(const void* theBlock, std::vector< vtkSmartPointer<T> >& theVector)
+{
+  theVector.resize(NetVtk_BlockCount(theBlock));
+  for (std::size_t i = 0; i < theVector.size(); ++i)
+  {
+    theVector[i] = static_cast<T*>(NetVtk_BlockAddress(theBlock, i));
+  }
+}
+
+template <int Position, class T>
+void* NetVtk_ObjectsOut(const std::vector<T*>& theVector)
+{
+  std::vector<void*>& anObjects = NetVtk_Slot< std::vector<void*>, Position >();
+  anObjects.clear();
+  for (T* anObject : theVector)
+  {
+    if (anObject)
+    {
+      anObject->Register(nullptr);
+    }
+    anObjects.push_back(anObject);
+  }
+  return NetVtk_VectorOf< Position >(anObjects.size(), anObjects.data());
+}
+
+template <int Position, class T>
+void* NetVtk_ObjectsOut(const std::vector< vtkSmartPointer<T> >& theVector)
+{
+  std::vector<void*>& anObjects = NetVtk_Slot< std::vector<void*>, Position >();
+  anObjects.clear();
+  for (const vtkSmartPointer<T>& anObject : theVector)
+  {
+    if (anObject)
+    {
+      anObject->Register(nullptr);
+    }
+    anObjects.push_back(anObject.Get());
+  }
+  return NetVtk_VectorOf< Position >(anObjects.size(), anObjects.data());
+}
+%}
+
+%define %netvtk_object_vector(TYPE)
+%netvtk_vector_typemaps(%arg(std::vector< TYPE* >), TYPE, %arg(global::Vtk.NativeArrays.Pointers($csinput, TYPE.getCPtr)),
+                        %arg(global::Vtk.NativeArrays.Proxies(ptr, netvtkItem => new TYPE(netvtkItem, true))),
+                        NetVtk_ObjectsIn, NetVtk_ObjectsOut)
+%netvtk_vector_typemaps(%arg(std::vector< vtkSmartPointer< TYPE > >), TYPE,
+                        %arg(global::Vtk.NativeArrays.Pointers($csinput, TYPE.getCPtr)),
+                        %arg(global::Vtk.NativeArrays.Proxies(ptr, netvtkItem => new TYPE(netvtkItem, true))),
+                        NetVtk_ObjectsIn, NetVtk_ObjectsOut)
 %enddef
 
 /*
@@ -176,3 +264,34 @@ typedef int vtkTypeBool;
 %netvtk_sized_return(int, int, 3)
 %netvtk_sized_return(int, int, 4)
 %netvtk_sized_return(int, int, 6)
+
+/*
+ * A pointer VTK hands back through a T*& parameter whose size hint names it (VTK_SIZEHINT(pts, npts): GetCellPoints'
+ * points, as many as npts says after the call) -> ref CSTYPE[], copied right after the call (null for nullptr); the array
+ * passed in isn't read, and after a C++ exception the variable keeps it. netvtk-gen declares the parameter as written
+ * and calls the macro around the declaration, %clear after: SIZE is the count as the wrapper spells it, its arguments
+ * (*arg3 for a reference) and its result.
+ */
+%{
+// the pointer and the count C# copies, in the block it passes (two long longs; the count -1 until the call is over)
+template <class T>
+void NetVtk_SizedResult(long long* theBlock, T* thePointer, long long theCount)
+{
+  theBlock[0] = static_cast<long long>(reinterpret_cast<std::intptr_t>(thePointer));
+  theBlock[1] = thePointer && theCount > 0 ? theCount : 0;
+}
+%}
+
+%define %netvtk_sized_ref(TYPE, NAME, CSTYPE, SIZE)
+%typemap(ctype)  TYPE *&NAME "long long *"
+%typemap(imtype) TYPE *&NAME "long[]"
+%typemap(cstype) TYPE *&NAME "ref CSTYPE[]"
+%typemap(csin, pre="    long[] sized$csinput = new long[] { 0, -1 };",
+         post="      if (sized$csinput[1] >= 0) $csinput = global::Vtk.NativeArrays.CopyOut<CSTYPE>(new global::System.IntPtr(sized$csinput[0]), (int)sized$csinput[1]);",
+         cshin="ref $csinput") TYPE *&NAME "sized$csinput"
+%typemap(in) TYPE *&NAME ($*1_ltype temp) %{
+  temp = 0;
+  $1 = &temp;
+%}
+%typemap(argout) TYPE *&NAME %{ NetVtk_SizedResult($input, temp$argnum, static_cast<long long>(SIZE)); %}
+%enddef

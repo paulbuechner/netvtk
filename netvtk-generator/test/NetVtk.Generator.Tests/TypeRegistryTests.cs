@@ -43,7 +43,7 @@ public class TypeRegistryTests
       Assert.That(registry.Class("vtkDemoTemplate_double")?.DeclaringHeader,
                   Is.EqualTo("Demo_nested.hxx"));
       Assert.That(registry.Class("vtkDemoSource"),
-                  Is.EqualTo(new KnownClass("vtkDemoSource", "Demo", WrapKind.Transient)));
+                  Is.EqualTo(new KnownClass("vtkDemoSource", "Demo", WrapKind.VtkObject)));
       Assert.That(registry.Class("vtkDemoSource")?.DeclaringHeader, Is.EqualTo("vtkDemoSource.h"));
       Assert.That(registry.Class("vtkDemoInfo")?.Kind, Is.EqualTo(WrapKind.ValueType));
       Assert.That(registry.ImportsOf("Demo"), Is.EqualTo(new[] { "Core" }));

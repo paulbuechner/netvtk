@@ -1,6 +1,7 @@
 {
   "name": "vtk",
   "version": "9.7.1",
+  "port-version": 1,
   "description": "The Visualization Toolkit (VTK), with the modules NetVtk wraps and VTK's own copies of its third-party libraries",
   "homepage": "https://vtk.org",
   "license": "BSD-3-Clause",

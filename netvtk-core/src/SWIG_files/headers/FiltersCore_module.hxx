@@ -64,6 +64,7 @@
 #include <vtkTransform.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkUnstructuredGridAlgorithm.h>
+#include <vtkVector.h>
 #include <vtk3DLinearGridCrinkleExtractor.h>
 #include <vtk3DLinearGridPlaneCutter.h>
 #include <vtkAppendArcLength.h>

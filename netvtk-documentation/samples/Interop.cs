@@ -90,14 +90,14 @@ public class Interop
     var folders = Directory.GetDirectories(swig).Select(Path.GetFileName).Order();
     var indexes = Directory.GetFiles(swig, "*.json").Select(Path.GetFileName).Order();
 
-    // Assert (a module per VTK module, the typemap library, the companions, the module headers,
-    // the interop file)
+    // Assert (a module per VTK module and RenderingOpenGL2's Windows-only one, the typemap library,
+    // the companions, the module headers, the interop file)
     using (Assert.EnterMultipleScope())
     {
       Assert.That(
         folders, Is.EqualTo(new[] { "common", "extras", "headers", "interop", "wrapper" }));
-      Assert.That(indexes, Is.EqualTo(new[] { "classes.json", "modules.json" }));
-      Assert.That(Directory.GetFiles(Path.Combine(swig, "wrapper"), "*.i"), Has.Length.EqualTo(25));
+      Assert.That(indexes, Is.EqualTo(new[] { "classes.json", "modules.json", "platforms.json" }));
+      Assert.That(Directory.GetFiles(Path.Combine(swig, "wrapper"), "*.i"), Has.Length.EqualTo(26));
       Assert.That(File.Exists(Path.Combine(swig, "interop", "NetVtkInterop.i")));
       Assert.That(File.Exists(Path.Combine(swig, "wrapper", "CommonCore.i")));
     }

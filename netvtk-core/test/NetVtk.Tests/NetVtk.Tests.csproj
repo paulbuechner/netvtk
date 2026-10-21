@@ -17,6 +17,8 @@
     <IsTestProject>true</IsTestProject>
     <RootNamespace>NetVtk.Tests</RootNamespace>
     <NetVtkArtifacts>$(MSBuildThisFileDirectory)..\..\artifacts\runtimes</NetVtkArtifacts>
+    <!-- .NET: the assembly runs as an app too, with its own Main (ObjectFactoryTests' FirstObject) for the test SDK's empty one -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>

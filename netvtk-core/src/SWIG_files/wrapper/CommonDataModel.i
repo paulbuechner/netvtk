@@ -1170,11 +1170,13 @@
 %netvtk_address(%arg(vtkSignedCharArray* const*))
 %netvtk_address(%arg(vtkVertexPedigreeIdDistribution))
 %netvtk_address_ref(%arg(const vtkIdType*))
-%netvtk_address_ref(%arg(double*))
 %netvtk_address_ref(%arg(unsigned char*))
 %netvtk_address_ref(%arg(void*))
 %netvtk_address_ref(%arg(vtkIdType*))
 %netvtk_keep_construct(vtkFieldData_Iterator)
+%netvtk_object_vector(vtkAbstractArray)
+%netvtk_object_vector(vtkCellAttribute)
+%netvtk_object_vector(vtkFieldData)
 %netvtk_sized_return(double, double, 10)
 %netvtk_sized_return(double, double, 2)
 %netvtk_sized_return(double, double, 3)
@@ -1194,6 +1196,17 @@
 %netvtk_std_array(%arg(signed char), 2, sbyte)
 %netvtk_std_array(%arg(unsigned char), 3, byte)
 %netvtk_std_array(%arg(unsigned char), 4, byte)
+%netvtk_valueclass_vector(vtkAMRDataInternals_Block)
+%netvtk_valueclass_vector(vtkCellGridSidesQuery_SideSetArray)
+%netvtk_valueclass_vector(vtkDataObjectTreeItem)
+%netvtk_valueclass_vector(vtkInEdgeType)
+%netvtk_valueclass_vector(vtkOutEdgeType)
+%netvtk_valueclass_vector(vtkStringToken)
+%netvtk_vector(double, double)
+%netvtk_vector(int, int)
+%netvtk_vector(unsigned int, uint)
+%netvtk_vector(vtkCellGridEvaluator_AllocationsByCellType_ClassifiedPoint, vtkCellGridEvaluator_AllocationsByCellType_ClassifiedPoint)
+%netvtk_vector(vtkIdType, long)
 
 %{
 // Layout guards for the C# structs in src/NetVtk/CommonDataModel/: a mismatch fails the native build.
@@ -1672,10 +1685,13 @@ public:
   bool Empty() const;
   unsigned int GetNumberOfBlocks() const;
   const vtkAMRDataInternals_Block& GetBlock(unsigned int i);
+  const std::vector< vtkAMRDataInternals_Block >& GetAllBlocks() const;
 };
 
 class vtkAMRDataInternals_Block {
 public:
+  vtkSmartPointer<vtkUniformGrid> Grid;
+  unsigned int Index;
 };
 
 class vtkDataObject : public vtkObject {
@@ -1913,6 +1929,7 @@ public:
   vtkCompositeDataIterator* NewIterator();
   int GetDataObjectType();
   void Initialize();
+  void Initialize(const std::vector< unsigned int >& blocksPerLevel);
   void Initialize(vtkAMRMetaData* metadata);
   %csattributes Initialize(int numLevels, const int* blocksPerLevel) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   void Initialize(int numLevels, const int* blocksPerLevel);
@@ -1966,6 +1983,7 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
+  void Initialize(const std::vector< unsigned int >& blocksPerLevel);
   %csattributes Initialize(int numLevels, const int* blocksPerLevel) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   void Initialize(int numLevels, const int* blocksPerLevel);
   int GetGridDescription();
@@ -1981,6 +1999,7 @@ public:
   %csattributes GetIndex(unsigned int level, unsigned int id) const "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   int GetIndex(unsigned int level, unsigned int id) const;
   void ComputeIndexPair(unsigned int index, unsigned int& level, unsigned int& id);
+  const std::vector< int >& GetNumBlocks() const;
   void DeepCopy(vtkAMRMetaData* other);
 };
 
@@ -2072,6 +2091,7 @@ public:
   void PrintSelf(std::ostream& os, vtkIndent indent);
   %csattributes Initialize(int numLevels, const int* blocksPerLevel) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   void Initialize(int numLevels, const int* blocksPerLevel);
+  void Initialize(const std::vector< unsigned int >& blocksPerLevel);
   void GetOrigin(double* origin);
   NetVtk_Address< double* > GetOrigin();
   void SetOrigin(NetVtk_Address< const double* > origin);
@@ -2103,6 +2123,7 @@ public:
   bool CheckValidity();
   bool FindCell(double* q, unsigned int level, unsigned int index, int& cellIdx);
   bool FindGrid(double* q, int level, unsigned int& gridId);
+  bool FindGrids(double* q, unsigned int level, std::vector< unsigned int >& gridIds);
   bool FindGrid(double* q, unsigned int& level, unsigned int& gridId);
   unsigned int GetGridType();
   void SetGridType(unsigned int _arg);
@@ -2150,8 +2171,12 @@ public:
   vtkIdType GetNumberOfConnectivityIds() const;
   bool IsStorageShareable() const;
   vtkIdType IsHomogeneous() const;
-  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, NetVtk_AddressRef< const vtkIdType* > cellPoints);
-  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, NetVtk_AddressRef< const vtkIdType* > cellPoints, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, cellPoints, long, (*arg3))
+  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, const vtkIdType*& cellPoints);
+  %clear const vtkIdType *&cellPoints;
+  %netvtk_sized_ref(const vtkIdType, cellPoints, long, (*arg3))
+  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, const vtkIdType*& cellPoints, vtkIdList* ptIds);
+  %clear const vtkIdType *&cellPoints;
   void GetCellAtId(vtkIdType cellId, vtkIdList* pts);
   void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, vtkIdType* cellPoints);
   vtkIdType GetCellSize(vtkIdType cellId) const;
@@ -2332,18 +2357,22 @@ class vtkOutEdgeType {
 public:
   vtkOutEdgeType();
   vtkOutEdgeType(vtkIdType t, vtkIdType id);
+  vtkIdType Target;
 };
 
 class vtkInEdgeType {
 public:
   vtkInEdgeType();
   vtkInEdgeType(vtkIdType s, vtkIdType id);
+  vtkIdType Source;
 };
 
 class vtkEdgeType {
 public:
   vtkEdgeType();
   vtkEdgeType(vtkIdType s, vtkIdType t, vtkIdType id);
+  vtkIdType Source;
+  vtkIdType Target;
 };
 
 class vtkGraph : public vtkDataObject {
@@ -2403,8 +2432,10 @@ public:
   bool IsSameStructure(vtkGraph* other);
   vtkIdType GetSourceVertex(vtkIdType e);
   vtkIdType GetTargetVertex(vtkIdType e);
-  void SetEdgePoints(vtkIdType e, vtkIdType npts, NetVtk_Address< const double* > pts);
-  void GetEdgePoints(vtkIdType e, vtkIdType& npts, NetVtk_AddressRef< double* > pts);
+  void SetEdgePoints(vtkIdType e, vtkIdType npts, const double* pts);
+  %netvtk_sized_ref(double, pts, double, 3 * (*arg3))
+  void GetEdgePoints(vtkIdType e, vtkIdType& npts, double*& pts);
+  %clear double *&pts;
   vtkIdType GetNumberOfEdgePoints(vtkIdType e);
   %apply double *NETVTK_SIZE3 { double *GetEdgePoint };
   double* GetEdgePoint(vtkIdType e, vtkIdType i);
@@ -3022,6 +3053,8 @@ public:
   void InitializeFieldList(vtkDataSetAttributes* dsa);
   void IntersectFieldList(vtkDataSetAttributes* dsa);
   void UnionFieldList(vtkDataSetAttributes* dsa);
+  void GenerateCompositeArray(std::vector< vtkFieldData* > fields, vtkDataSetAttributes* outputData);
+  void GenerateCompositeArray(std::vector< vtkFieldData* > fields, vtkIdList* indexArray, vtkDataSetAttributes* outputData);
   void CopyAllocate(vtkDataSetAttributes* output, int ctype, vtkIdType sz, vtkIdType ext) const;
   void CopyData(int inputIndex, vtkDataSetAttributes* input, vtkIdType fromId, vtkDataSetAttributes* output, vtkIdType toId) const;
   void CopyData(int inputIndex, vtkDataSetAttributes* input, vtkIdType inputStart, vtkIdType numValues, vtkDataSetAttributes* output, vtkIdType outStart) const;
@@ -3309,6 +3342,7 @@ public:
   void AssignNullValue(unsigned short outId);
   void Realloc(vtkIdType sze);
   vtkIdType GetNumberOfArrays();
+  const std::vector< vtkAbstractArray* > ExcludedArrays;
 };
 
 class vtkAtom {
@@ -4254,7 +4288,9 @@ public:
   %csattributes GetCellTypes(vtkCellTypes* types) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   void GetCellTypes(vtkCellTypes* types);
   void GetCellPoints(vtkIdType cellId, vtkIdList* ptIds);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetPointCells(vtkIdType ptId, vtkIdList* cellIds);
   void GetCellNeighbors(vtkIdType cellId, vtkIdList* ptIds, vtkIdList* cellIds);
   int GetCellNumberOfFaces(vtkIdType cellId, unsigned char& cellType, vtkGenericCell* cell);
@@ -4337,7 +4373,9 @@ public:
   int GetMinSpatialDimension();
   int GetCellType(vtkIdType cellId);
   vtkIdType GetCellSize(vtkIdType cellId);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetCellPoints(vtkIdType cellId, vtkIdList* ptIds);
   vtkIdType FindCell(double* x, vtkCell* cell, vtkIdType cellId, double tol2, int& subId, double* pcoords, double* weights);
   void GetPointCells(vtkIdType ptId, vtkIdList* cellIds);
@@ -4412,13 +4450,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool IsInsideOut();
   bool GetCentroid(double* centroid) const;
   void Contour(double value, vtkDataArray* cellScalars, vtkIncrementalPointLocator* locator, vtkCellArray* verts, vtkCellArray* lines, vtkCellArray* polys, vtkPointData* inPd, vtkPointData* outPd, vtkCellData* inCd, vtkIdType cellId, vtkCellData* outCd);
@@ -4511,10 +4563,16 @@ public:
   vtkAOSDataArrayTemplate_long_long* const GetConnectivityAOSArray64() const;
   vtkIdType IsHomogeneous() const;
   void InitTraversal();
-  int GetNextCell(vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg2))
+  int GetNextCell(vtkIdType& npts, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   int GetNextCell(vtkIdList* pts);
-  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, NetVtk_AddressRef< const vtkIdType* > cellPoints);
-  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, NetVtk_AddressRef< const vtkIdType* > cellPoints, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, cellPoints, long, (*arg3))
+  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, const vtkIdType*& cellPoints);
+  %clear const vtkIdType *&cellPoints;
+  %netvtk_sized_ref(const vtkIdType, cellPoints, long, (*arg3))
+  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, const vtkIdType*& cellPoints, vtkIdList* ptIds);
+  %clear const vtkIdType *&cellPoints;
   void GetCellAtId(vtkIdType cellId, vtkIdList* pts);
   void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, vtkIdType* cellPoints);
   vtkIdType GetCellPointAtId(vtkIdType cellId, vtkIdType cellPointIndex) const;
@@ -4551,8 +4609,10 @@ public:
   vtkIdType GetSize();
   %csattributes GetNumberOfConnectivityEntries() "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   vtkIdType GetNumberOfConnectivityEntries();
-  %csattributes GetCell(vtkIdType loc, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
-  void GetCell(vtkIdType loc, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts);
+  %csattributes GetCell(vtkIdType loc, vtkIdType& npts, const vtkIdType*& pts) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCell(vtkIdType loc, vtkIdType& npts, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   %csattributes GetCell(vtkIdType loc, vtkIdList* pts) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   void GetCell(vtkIdType loc, vtkIdList* pts);
   %csattributes GetInsertLocation(int npts) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
@@ -4670,6 +4730,10 @@ public:
 class vtkCellAttribute_CellTypeInfo {
 public:
   vtkCellAttribute_CellTypeInfo();
+  vtkStringToken DOFSharing;
+  vtkStringToken FunctionSpace;
+  vtkStringToken Basis;
+  int Order;
 };
 
 class vtkCellAttributeCalculator : public vtkObject {
@@ -4747,6 +4811,10 @@ public:
 class vtkCellGridRangeQuery_ComponentRange {
 public:
   vtkCellGridRangeQuery_ComponentRange();
+  vtkTimeStamp FiniteRangeTime;
+  std::array< double, 2 > FiniteRange;
+  vtkTimeStamp EntireRangeTime;
+  std::array< double, 2 > EntireRange;
 };
 
 class vtkCellGrid : public vtkDataObject {
@@ -4781,11 +4849,15 @@ public:
   int AddAllCellMetadata();
   bool RemoveCellMetadata(vtkCellMetadata* meta);
   int RemoveUnusedCellMetadata();
+  std::vector< vtkStringToken > CellTypeArray() const;
+  std::vector< std::string > GetCellTypes() const;
   const vtkCellMetadata* const GetCellType(vtkStringToken cellTypeName) const;
   bool AddCellAttribute(vtkCellAttribute* attribute);
   bool RemoveCellAttribute(vtkCellAttribute* attribute);
   bool GetCellAttributeRange(vtkCellAttribute* attribute, int componentIndex, double* range, bool finiteRange = false) const;
   void ClearRangeCache(const std::string& attributeName = std::string());
+  std::vector< int > GetUnorderedCellAttributeIds() const;
+  std::vector< vtkSmartPointer< vtkCellAttribute > > GetCellAttributeList() const;
   vtkCellAttribute* const GetCellAttribute(unsigned int hash);
   vtkCellAttribute* const GetCellAttributeById(int attributeId);
   vtkCellAttribute* const GetCellAttributeByName(const std::string& name);
@@ -4919,6 +4991,8 @@ class vtkCellGridEvaluator_AllocationsByCellType {
 public:
   vtkCellGridEvaluator_AllocationsByCellType();
   vtkIdType GetNumberOfOutputPoints() const;
+  std::vector< vtkCellGridEvaluator_AllocationsByCellType_ClassifiedPoint > InputPoints;
+  vtkIdType Offset;
 };
 
 class vtkCellGridResponderBase : public vtkObject {
@@ -4951,6 +5025,7 @@ public:
 class vtkCellGridResponders_CalculatorForTagSet {
 public:
   vtkCellGridResponders_CalculatorForTagSet();
+  vtkSmartPointer<vtkCellAttributeCalculator> CalculatorPrototype;
 };
 
 class vtkCellGridSidesCache : public vtkObject {
@@ -4969,6 +5044,10 @@ public:
 class vtkCellGridSidesCache_Side {
 public:
   vtkCellGridSidesCache_Side();
+  vtkStringToken CellType;
+  vtkStringToken SideShape;
+  vtkIdType DOF;
+  int SideId;
 };
 
 class vtkCellGridSidesCache_Entry {
@@ -5010,6 +5089,7 @@ public:
   bool Initialize();
   void StartPass();
   bool IsAnotherPassRequired();
+  std::vector< vtkCellGridSidesQuery_SideSetArray > GetSideSetArrays(vtkStringToken cellType);
   static vtkStringToken SelectionModeToLabel(vtkCellGridSidesQuery_SelectionMode mode);
   static vtkCellGridSidesQuery_SelectionMode SelectionModeFromLabel(vtkStringToken token);
   static vtkStringToken SummaryStrategyToLabel(vtkCellGridSidesQuery_SummaryStrategy strategy);
@@ -5023,6 +5103,9 @@ public:
 class vtkCellGridSidesQuery_SideSetArray {
 public:
   vtkCellGridSidesQuery_SideSetArray();
+  vtkStringToken CellType;
+  vtkStringToken SideShape;
+  vtkSmartPointer<vtkIdTypeArray> Sides;
 };
 
 class vtkCellGridSummaryInformationQuery : public vtkCellGridQuery {
@@ -5102,6 +5185,8 @@ public:
 class vtkCellLinks_Link {
 public:
   vtkCellLinks_Link();
+  vtkIdType ncells;
+  void* const cells;
 };
 
 class vtkCellLocator : public vtkAbstractCellLocator {
@@ -5196,6 +5281,7 @@ public:
   vtkCellMetadata* NewInstance() const;
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
+  std::vector< vtkStringToken > InheritanceHierarchy() const;
   void PrintSelf(std::ostream& os, vtkIndent indent);
   static vtkSmartPointer<vtkCellMetadata> NewInstance(vtkStringToken className, vtkCellGrid* grid = nullptr);
   unsigned int Hash();
@@ -5444,7 +5530,9 @@ public:
   int GetMaxCellSize();
   vtkCell* const GetCell(int arg0, int arg1, int arg2);
   vtkCell* const GetCell(vtkIdType arg0);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetCellPoints(vtkIdType arg0, vtkIdList* idList);
   void GetPointCells(vtkIdType arg0, vtkIdList* idList);
   void GetCell(vtkIdType arg0, vtkGenericCell* cell);
@@ -5746,13 +5834,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetFacePoints(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  void GetEdgeToAdjacentFaces(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetPointToIncidentEdges(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetPointToIncidentFaces(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetPointToOneRingPoints(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
+  %netvtk_sized_ref(const vtkIdType, arg1, long, 2)
+  void GetEdgePoints(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetFacePoints(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
   bool GetCentroid(double* arg0) const;
   NetVtk_Address< double* > GetParametricCoords();
   int GetCellType();
@@ -5900,6 +6002,7 @@ public:
   void SetRootNodeName(const char* name);
   const char* GetRootNodeName() const;
   int AddNode(const char* name, int parent = 0);
+  std::vector< int > AddNodes(const std::vector< std::string >& names, int parent = 0);
   int AddSubtree(int parent, vtkDataAssembly* other, int otherParent = 0);
   bool RemoveNode(int id);
   void SetNodeName(int id, const char* name);
@@ -5908,10 +6011,13 @@ public:
   int GetFirstNodeByPath(const char* path) const;
   int FindOrCreateNodeAtPath(const char* path, int parent = 0);
   bool AddDataSetIndex(int id, unsigned int dataset_index);
+  bool AddDataSetIndices(int id, const std::vector< unsigned int >& dataset_indices);
   bool AddDataSetIndexRange(int id, unsigned int index_start, int count);
   bool RemoveDataSetIndex(int id, unsigned int dataset_index);
   bool RemoveAllDataSetIndices(int id, bool traverse_subtree = true);
   int FindFirstNodeWithName(const char* name, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
+  std::vector< int > FindNodesWithName(const char* name, int sort_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
+  std::vector< int > GetChildNodes(int parent, bool traverse_subtree = true, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
   int GetNumberOfChildren(int parent) const;
   int GetChild(int parent, int index) const;
   int GetChild(int parent, const char* name) const;
@@ -5932,6 +6038,10 @@ public:
   vtkIdType GetAttributeOrDefault(int id, const char* name, vtkIdType default_value) const;
   void Visit(vtkDataAssemblyVisitor* visitor, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
   void Visit(int id, vtkDataAssemblyVisitor* visitor, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
+  std::vector< unsigned int > GetDataSetIndices(int id, bool traverse_subtree = true, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
+  std::vector< unsigned int > GetDataSetIndices(const std::vector< int >& ids, bool traverse_subtree = true, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
+  std::vector< int > SelectNodes(const std::vector< std::string >& path_queries, int traversal_order = vtkDataAssembly_TraversalOrder::DepthFirst) const;
+  void SubsetCopy(vtkDataAssembly* other, const std::vector< int >& selected_branches);
   void DeepCopy(vtkDataAssembly* other);
   static bool IsNodeNameValid(const char* name);
   static std::string MakeValidNodeName(const char* name);
@@ -5958,7 +6068,11 @@ public:
   static vtkSmartPointer<vtkCompositeDataSet> GenerateCompositeDataSetFromHierarchy(vtkPartitionedDataSetCollection* input);
   static bool HasCompatibilityHierarchy(vtkPartitionedDataSetCollection* input);
   static bool IsCompatibilityHierarchy(vtkDataAssembly* hierarchy);
+  static std::vector< unsigned int > GetSelectedCompositeIds(const std::vector< std::string >& selectors, vtkDataAssembly* hierarchyOrAssembly, vtkPartitionedDataSetCollection* data = nullptr, bool leaf_nodes_only = false);
   static std::string GetSelectorForCompositeId(unsigned int id, vtkDataAssembly* hierarchy);
+  static std::vector< std::string > GetSelectorsForCompositeIds(const std::vector< unsigned int >& ids, vtkDataAssembly* hierarchy);
+  static std::vector< std::string > GetSelectorsForCompositeIds(const std::vector< unsigned int >& ids, vtkDataAssembly* hierarchy, vtkDataAssembly* assembly);
+  static std::vector< unsigned int > GetSelectorsCompositeIdsForCompositeIds(const std::vector< unsigned int >& ids, vtkDataAssembly* hierarchy);
 };
 
 class vtkDataAssemblyVisitor : public vtkObject {
@@ -5991,11 +6105,14 @@ public:
 class vtkDataObjectTreeItem {
 public:
   vtkDataObjectTreeItem(vtkDataObject* dobj = nullptr, vtkInformation* info = nullptr);
+  vtkSmartPointer<vtkDataObject> DataObject;
+  vtkSmartPointer<vtkInformation> MetaData;
 };
 
 class vtkDataObjectTreeInternals {
 public:
   vtkDataObjectTreeInternals();
+  std::vector< vtkDataObjectTreeItem > Children;
 };
 
 class vtkDataObjectTreeIndex {
@@ -6256,7 +6373,9 @@ public:
   vtkAbstractCellLinks* const GetLinks();
   NetVtk_Address< vtkIdType* > GetCellPoints(vtkIdType cellId);
   void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< vtkIdType* > pts);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetCellNeighbors(vtkIdType cellId, vtkIdType* neighbors, int* wholeExtent = nullptr);
   void ComputeCellStructuredCoords(vtkIdType cellId, int& i, int& j, int& k, bool adjustForExtent = true);
   vtkIdType ComputeCellId(int i, int j, int k, bool adjustForExtent = true);
@@ -6475,7 +6594,7 @@ public:
   int GetNumberOfAttributesToInterpolate();
   NetVtk_Address< int* > GetAttributesToInterpolate();
   int HasAttribute(int size, int* attributes, int attribute);
-  void SetAttributesToInterpolate(int size, NetVtk_Address< int* > attributes);
+  void SetAttributesToInterpolate(int size, int* attributes);
   void SetAttributesToInterpolateToAll();
 };
 
@@ -6595,11 +6714,22 @@ public:
 
 class vtkGenericEdgeTable_PointEntry {
 public:
+  vtkIdType PointId;
+  double Coord[3];
+  void* const Scalar;
+  int numberOfComponents;
+  int Reference;
 };
 
 class vtkGenericEdgeTable_EdgeEntry {
 public:
   vtkGenericEdgeTable_EdgeEntry();
+  vtkIdType E1;
+  vtkIdType E2;
+  int Reference;
+  int ToSplit;
+  vtkIdType PtId;
+  vtkIdType CellId;
 };
 
 class vtkGenericInterpolatedVelocityField : public vtkFunctionSet {
@@ -6690,6 +6820,8 @@ public:
 class vtkVertexAdjacencyList {
 public:
   vtkVertexAdjacencyList();
+  std::vector< vtkInEdgeType > InEdges;
+  std::vector< vtkOutEdgeType > OutEdges;
 };
 
 class vtkGraphInternals : public vtkObject {
@@ -6702,6 +6834,10 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
+  void RemoveEdgeFromOutList(vtkIdType e, std::vector< vtkOutEdgeType >& outEdges);
+  void RemoveEdgeFromInList(vtkIdType e, std::vector< vtkInEdgeType >& inEdges);
+  void ReplaceEdgeFromOutList(vtkIdType from, vtkIdType to, std::vector< vtkOutEdgeType >& outEdges);
+  void ReplaceEdgeFromInList(vtkIdType from, vtkIdType to, std::vector< vtkInEdgeType >& inEdges);
 };
 
 class vtkHexagonalPrism : public vtkCell3D {
@@ -6714,13 +6850,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool GetCentroid(double* centroid) const;
   bool IsInsideOut();
   int GetCellType();
@@ -6766,13 +6916,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool GetCentroid(double* centroid) const;
   int GetCellType();
   int GetNumberOfEdges();
@@ -6812,6 +6976,13 @@ public:
 class vtkHyperTreeData {
 public:
   vtkHyperTreeData();
+  vtkIdType TreeIndex;
+  unsigned int NumberOfLevels;
+  vtkIdType NumberOfVertices;
+  vtkIdType NumberOfNodes;
+  vtkIdType GlobalIndexStart;
+  std::vector< unsigned int > ParentToElderChild;
+  std::vector< vtkIdType > GlobalIndexTable;
 };
 
 class vtkHyperTree : public vtkObject {
@@ -9191,7 +9362,9 @@ public:
   vtkCell* const GetCell(vtkIdType arg0);
   void GetCell(vtkIdType arg0, vtkGenericCell* arg1);
   int GetCellType(vtkIdType arg0);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetCellPoints(vtkIdType arg0, vtkIdList* ptIds);
   void GetPointCells(vtkIdType ptId, vtkIdList* cellIds);
   int GetMaxCellSize();
@@ -9213,13 +9386,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool GetCentroid(double* centroid) const;
   bool IsInsideOut();
   int GetCellType();
@@ -9666,10 +9853,16 @@ public:
   vtkAbstractCellLinks* const GetLinks();
   void DeleteCells();
   void DeleteLinks();
-  void GetPointCells(vtkIdType ptId, vtkIdType& ncells, NetVtk_AddressRef< vtkIdType* > cells);
+  %netvtk_sized_ref(vtkIdType, cells, long, (*arg3))
+  void GetPointCells(vtkIdType ptId, vtkIdType& ncells, vtkIdType*& cells);
+  %clear vtkIdType *&cells;
   void GetCellEdgeNeighbors(vtkIdType cellId, vtkIdType p1, vtkIdType p2, vtkIdList* cellIds);
-  unsigned char GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  unsigned char GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   int IsTriangle(int v1, int v2, int v3);
   int IsEdge(vtkIdType p1, vtkIdType p2);
   int IsPointUsedByCell(vtkIdType ptId, vtkIdType cellId);
@@ -9738,7 +9931,10 @@ public:
   static const char* GetTransparencyName();
   static const char* GetShininessName();
   static void SetField(vtkDataObject* obj, const char* name, const char* value);
+  static void SetField(vtkDataObject* obj, const char* name, const std::vector< std::string >& values);
+  static std::vector< std::string > GetField(vtkDataObject* obj, const char* name);
   static void SetField(vtkDataObject* obj, const char* name, NetVtk_Address< double* > value, vtkIdType numberOfComponents);
+  static std::vector< double > GetField(vtkDataObject* obj, const char* name, const std::vector< double >& defaultValue);
   void PrintSelf(std::ostream& os, vtkIndent indent);
 };
 
@@ -9914,13 +10110,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetPointToIncidentEdges(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType arg0, NetVtk_AddressRef< const vtkIdType* > arg1);
+  %netvtk_sized_ref(const vtkIdType, arg1, long, 2)
+  void GetEdgePoints(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, arg1, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType arg0, const vtkIdType*& arg1);
+  %clear const vtkIdType *&arg1;
   bool GetCentroid(double* centroid) const;
   double ComputeVolume();
   int GetCellType();
@@ -9984,13 +10194,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool GetCentroid(double* centroid) const;
   bool IsInsideOut();
   int GetCellType();
@@ -11034,7 +11258,9 @@ public:
   vtkIdType GetCurrentPoint();
   vtkIdType GetPoint(int axis, int ptIdx);
   vtkIdType GetNumberOfAxes();
-  void GetAxisPoints(int axis, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetAxisPoints(int axis, vtkIdType& npts, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   void BuildRepresentation(vtkPolyData* pd);
 };
 
@@ -11111,8 +11337,12 @@ public:
   void GetDistinctCellTypes(vtkCellTypes* types);
   vtkUnsignedCharArray* const GetDistinctCellTypesArray();
   void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
-  void GetPointCells(vtkIdType ptId, vtkIdType& ncells, NetVtk_AddressRef< vtkIdType* > cells);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(vtkIdType, cells, long, (*arg3))
+  void GetPointCells(vtkIdType ptId, vtkIdType& ncells, vtkIdType*& cells);
+  %clear vtkIdType *&cells;
   %csattributes GetCellTypes(vtkCellTypes* types) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   void GetCellTypes(vtkCellTypes* types);
   vtkDataArray* const GetCellTypes();
@@ -11255,13 +11485,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool GetCentroid(double* centroid) const;
   bool IsInsideOut();
   int GetCellType();
@@ -11316,13 +11560,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faces);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edges);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faces);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faces, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faces);
+  %clear const vtkIdType *&faces;
+  %netvtk_sized_ref(const vtkIdType, edges, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edges);
+  %clear const vtkIdType *&edges;
+  %netvtk_sized_ref(const vtkIdType, faces, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faces);
+  %clear const vtkIdType *&faces;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   NetVtk_Address< double* > GetParametricCoords();
   bool GetCentroid(double* centroid) const;
   bool IsInsideOut();
@@ -11372,13 +11630,27 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
-  void GetEdgePoints(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFacePoints(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > pts);
-  void GetEdgeToAdjacentFaces(vtkIdType edgeId, NetVtk_AddressRef< const vtkIdType* > pts);
-  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > edgeIds);
-  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > faceIds);
-  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, NetVtk_AddressRef< const vtkIdType* > pts);
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgePoints(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetFacePoints(vtkIdType faceId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, pts, long, 2)
+  void GetEdgeToAdjacentFaces(vtkIdType edgeId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetFaceToAdjacentFaces(vtkIdType faceId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, edgeIds, long, result)
+  vtkIdType GetPointToIncidentEdges(vtkIdType pointId, const vtkIdType*& edgeIds);
+  %clear const vtkIdType *&edgeIds;
+  %netvtk_sized_ref(const vtkIdType, faceIds, long, result)
+  vtkIdType GetPointToIncidentFaces(vtkIdType pointId, const vtkIdType*& faceIds);
+  %clear const vtkIdType *&faceIds;
+  %netvtk_sized_ref(const vtkIdType, pts, long, result)
+  vtkIdType GetPointToOneRingPoints(vtkIdType pointId, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
   bool GetCentroid(double* centroid) const;
   bool IsInsideOut();
   int GetCellType();
@@ -11599,7 +11871,9 @@ public:
   void SetData(int* extent, bool usePixelVoxelOrientation);
   bool IsStorageShareable() const;
   vtkIdType IsHomogeneous() const;
-  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, NetVtk_AddressRef< const vtkIdType* > cellPoints, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, cellPoints, long, (*arg3))
+  void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, const vtkIdType*& cellPoints, vtkIdList* ptIds);
+  %clear const vtkIdType *&cellPoints;
   void GetCellAtId(vtkIdType cellId, vtkIdList* ptIds);
   void GetCellAtId(vtkIdType cellId, vtkIdType& cellSize, vtkIdType* cellPoints);
   void GetCellAtId(int* ijk, vtkIdList* ptIds);
@@ -11655,7 +11929,9 @@ public:
   void GetCellBounds(vtkIdType cellId, double* bounds);
   int GetCellType(vtkIdType cellId);
   vtkIdType GetCellSize(vtkIdType cellId);
-  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, NetVtk_AddressRef< const vtkIdType* > pts, vtkIdList* ptIds);
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))
+  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts, vtkIdList* ptIds);
+  %clear const vtkIdType *&pts;
   void GetCellPoints(vtkIdType cellId, vtkIdList* ptIds);
   void GetPointCells(vtkIdType ptId, vtkIdList* cellIds);
   int GetMaxCellSize();

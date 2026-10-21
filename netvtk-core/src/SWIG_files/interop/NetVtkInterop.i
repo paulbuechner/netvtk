@@ -16,6 +16,10 @@
  *                                 NetVtk's proxy at the root holds and drops the object's reference. VTK classes have
  *                                 one base each: a TYPE* is its base's pointer as it is.
  *   %netvtk_new(TYPE)             a C# constructor calling TYPE::New(), whose reference the proxy takes.
+ *   %netvtk_build(NAME)           the VTK build the binding's native library is compiled against (vtkNetVtkBuild.h,
+ *                                 which NetVtk's VTK port installs), as the module class's static NAME(): the binding
+ *                                 passes it to Vtk.VtkBuild.Require when it loads, which throws where NetVtk's natives
+ *                                 carry another build.
  */
 
 %{
@@ -118,4 +122,13 @@ template <class T> class vtkSmartPointer;
 %extend TYPE {
   TYPE() { return TYPE::New(); }
 }
+%enddef
+
+%define %netvtk_build(NAME)
+%{
+%#include <vtkNetVtkBuild.h>
+%}
+%inline %{
+inline const char* NAME() { return NETVTK_VTK_BUILD; }
+%}
 %enddef

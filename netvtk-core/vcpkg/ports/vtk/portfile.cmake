@@ -9,6 +9,12 @@ vcpkg_from_github(
     REF "v${VERSION}"
     SHA512 749f230c9afb7479ff4f7ac606f630ee5ff725df0dfd360df153aede579737b19bb5bef2a6747c955a08c942997bb08636c1dd7282309677e9f4477616ded63a
     HEAD_REF master
+    PATCHES
+        0001-dx-render-window-makes-its-context-current.patch
+        0002-dx-render-window-closes-its-interop-device.patch
+        0003-hardware-selector-keeps-the-render-framebuffer.patch
+        0004-render-window-reverse-z.patch
+        0005-reverse-z-where-depth-is-handled.patch
 )
 
 # NetVtk's module set
@@ -107,6 +113,21 @@ get_filename_component(_vtk_module_import_prefix "${_vtk_module_import_prefix}" 
 endforeach()
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" "${CURRENT_PACKAGES_DIR}/debug/share")
+
+# the build's name among VTK's headers, VTK's version and the port-version that counts NetVtk's patches: NetVtk reports
+# it at run time (Vtk.VtkBuild), and a binding compiled against these headers compares it with NetVtk's at load
+# (NetVtkInterop.i's %netvtk_build)
+file(READ "${CMAKE_CURRENT_LIST_DIR}/vcpkg.json" netvtk_manifest)
+string(JSON netvtk_port_version ERROR_VARIABLE netvtk_no_port_version GET "${netvtk_manifest}" "port-version")
+if(netvtk_no_port_version)
+    set(netvtk_port_version 0)
+endif()
+file(WRITE "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}/vtkNetVtkBuild.h" [[
+// NetVtk's VTK build, written by NetVtk's vcpkg port: VTK's version and the port-version, which counts NetVtk's patches.
+// A binding compiled against these headers runs on NetVtk's VTK libraries only if this matches Vtk.VtkBuild.Current.
+#ifndef vtkNetVtkBuild_h
+#define vtkNetVtkBuild_h
+]] "#define NETVTK_VTK_BUILD \"${VERSION}#${netvtk_port_version}\"\n#endif\n")
 
 # VTK installs its own and its third-party libraries' licenses into share/licenses
 if(EXISTS "${CURRENT_PACKAGES_DIR}/share/licenses")

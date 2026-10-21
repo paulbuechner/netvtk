@@ -31,6 +31,13 @@
     string ret = global::Vtk.Utf8.Decode($imcall);$excode
     return ret;
   }
+// a value class's field (netvtk-gen declares a char* one const char* const): a property, read only, as C# can't tell who
+// owns the text
+%typemap(csvarout, excode=SWIGEXCODE2) const char*, const char* const %{
+    get {
+      string ret = global::Vtk.Utf8.Decode($imcall);$excode
+      return ret;
+    } %}
 
 /*
  * const char*& -> ref string: in, a UTF-8 copy the callee may read and move along; out, whatever the pointer then points
@@ -104,6 +111,13 @@
     global::System.IntPtr ptr = $imcall;$excode
     return global::Vtk.Utf8.Decode(ptr);
   }
+// a value class's field (netvtk-gen declares it std::string): a property, read through the out typemap above, written
+// through the in typemap
+%typemap(csvarout, excode=SWIGEXCODE2) std::string, const std::string& %{
+    get {
+      global::System.IntPtr ptr = $imcall;$excode
+      return global::Vtk.Utf8.Decode(ptr);
+    } %}
 
 // director callbacks (Directors.i): a string parameter reaches the C# override decoded
 %typemap(directorin) const char*, const char* const "$input = (void*)$1;"

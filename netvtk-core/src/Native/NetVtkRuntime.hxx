@@ -3,8 +3,9 @@
 
 // NetVtkRuntime: what every wrapper library shares. The number of the exception a C# override threw
 // in a callback (src/SWIG_files/common/Directors.i), per thread: the callback's module and the
-// module of the call that led to it differ, and each wrapper library has its own statics. And a
-// memory copy for the bulk copies of VTK's arrays (Vtk.DataArrays), on every .NET.
+// module of the call that led to it differ, and each wrapper library has its own statics. A
+// memory copy for the bulk copies of VTK's arrays (Vtk.DataArrays), on every .NET. And the name of
+// the VTK build the natives carry (Vtk.VtkBuild).
 
 #ifndef NetVtkRuntime_HeaderFile
 #define NetVtkRuntime_HeaderFile
@@ -35,6 +36,9 @@ extern "C"
   NETVTK_RUNTIME_EXPORT void NetVtk_CopyMemory(void*       theTarget,
                                                const void* theSource,
                                                size_t      theSize);
+
+  // the VTK build the natives carry, vtkNetVtkBuild.h's NETVTK_VTK_BUILD ("9.7.1#1"), static
+  NETVTK_RUNTIME_EXPORT const char* NetVtk_VtkBuild();
 }
 
 #endif

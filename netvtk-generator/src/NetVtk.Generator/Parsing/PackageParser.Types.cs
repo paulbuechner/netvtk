@@ -82,12 +82,13 @@ internal sealed partial class PackageParser
         return WithConst(Convert(typedef.Decl.UnderlyingType), isConst);
       case TemplateSpecializationType { IsTypeAlias: true } alias:
         return WithConst(Convert(alias.AliasedType), isConst);
+      case TemplateSpecializationType written when written.IsSugared:
+        return WithConst(WrittenWidths(Convert(written.Desugar), written), isConst);
       case ParenType paren:
         return WithConst(Convert(paren.InnerType), isConst);
       case AttributedType attributed:
         return WithConst(Convert(attributed.ModifiedType), isConst);
-      case UsingType or SubstTemplateTypeParmType or TemplateSpecializationType or DecltypeType
-        when type.IsSugared:
+      case UsingType or SubstTemplateTypeParmType or DecltypeType when type.IsSugared:
         return WithConst(Convert(type.Desugar), isConst);
       case ClangBuiltinType builtin:
         return new CppBuiltinType(builtin.UnqualifiedType.AsString, isConst);
@@ -151,6 +152,40 @@ internal sealed partial class PackageParser
       default:
         return new UnsupportedType(type.AsString);
     }
+  }
+
+  /// <summary>
+  /// A standard library instance with the arguments its template's written ones resolve to where
+  /// they are numbers or standard library instances themselves (<c>std::vector&lt;vtkIdType&gt;</c>
+  /// keeps <c>vtkIdType</c>): an instance's own arguments are canonical, the generating platform's
+  /// (<c>size_t</c> is <c>unsigned long long</c> on win-x64), which the wrappers can't spell. Other
+  /// instances keep theirs: the classes they are go by them.
+  /// </summary>
+  private static CppType WrittenWidths(CppType canonical, TemplateSpecializationType written)
+  {
+    if (canonical is not NamedType { TemplateArguments.Count: > 0 } instance
+        || !instance.Name.StartsWith("std::", StringComparison.Ordinal))
+    {
+      return canonical;
+    }
+
+    List<CppType> arguments = [.. instance.TemplateArguments];
+    for (var i = 0; i < Math.Min(arguments.Count, written.Args.Count); i++)
+    {
+      if (written.Args[i].Kind != CXTemplateArgumentKind.CXTemplateArgumentKind_Type)
+      {
+        continue;
+      }
+
+      var argument = Convert(written.Args[i].AsType);
+      if ((argument is CppBuiltinType && arguments[i] is CppBuiltinType)
+          || (argument is NamedType w && arguments[i] is NamedType c && w.Name == c.Name))
+      {
+        arguments[i] = argument;
+      }
+    }
+
+    return instance with { TemplateArguments = arguments };
   }
 
   /// <summary>

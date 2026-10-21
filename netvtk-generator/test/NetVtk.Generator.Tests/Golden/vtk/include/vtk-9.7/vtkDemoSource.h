@@ -6,10 +6,13 @@
 // (elaborated in the nested header), an anonymous enum's default (its value), plain data, VTK_WRAPEXCLUDE, a static
 // overload taking the object by pointer first (the instance member is shadowed), a setter's sized array (copied), a
 // function pointer by its typedef (its calling convention may differ per platform), a third-party template's instance
-// (not wrapped).
+// (not wrapped), a value class's public data (properties: numbers, enums, a C array; a VTK object and a C string read
+// only), vectors both ways (a width typedef by its name, strings written back), a pointer a size hint names (a C# array
+// of the count after the call).
 #pragma once
 #include "vtkObject.h"
 #include "vtkSmartPointer.h"
+#include "demostd/std.h"
 #include "vtkdemojson/basic.h"
 
 enum class vtkDemoMode
@@ -24,6 +27,16 @@ struct vtkDemoInfo
 {
   double Area;
   int Count;
+};
+
+struct vtkDemoHit
+{
+  bool Valid = false;
+  vtkIdType Cell = -1;
+  vtkDemoMode Mode = vtkDemoMode::Fast;
+  vtkObject* Object = nullptr;
+  double Point[3] = { 0, 0, 0 };
+  const char* Label = nullptr;
 };
 
 class vtkDemoSource : public vtkObject
@@ -51,12 +64,21 @@ public:
   void SetNotation(int value) { this->Notation = value; }
   int GetNotation() { return this->Notation; }
   vtkDemoInfo GetInfo() const { return vtkDemoInfo(); }
+  vtkDemoHit GetHit() const { return vtkDemoHit(); }
   void Internal() VTK_WRAPEXCLUDE {}
   void Render(vtkDemoSource*) {}
   static void Render(vtkDemoSource*, vtkDemoSource*) {}
   void Format(int = ISO) {}
   void SetCallback(vtkDemoCallback, void*) {}
   vtkdemojson::basic<double> GetState() { return vtkdemojson::basic<double>(); }
+  void SetWeights(const std::vector<double>&) {}
+  std::vector<vtkIdType> GetIds() const { return std::vector<vtkIdType>(); }
+  void GetNames(std::vector<std::string>&) const {}
+  void GetPoints(vtkIdType& npts, const vtkIdType*& pts) VTK_SIZEHINT(pts, npts)
+  {
+    npts = 0;
+    pts = nullptr;
+  }
 
 protected:
   vtkDemoSource() : Name(nullptr), Notation(0) {}

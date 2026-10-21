@@ -346,7 +346,7 @@ internal sealed partial class PackageParser
 
       // the destructor must link too: the libraries may not export it, or define it inline over
       // internals
-      var traits = new ClassTraits(IsTransient: IsTransient(r), IsAbstract: r.IsAbstract,
+      var traits = new ClassTraits(IsVtkObject: IsVtkObject(r), IsAbstract: r.IsAbstract,
                                    HasPublicDestructor: (r.Destructor is null
                                                          || (r.Destructor.Access
                                                              == CX_CXXAccessSpecifier.CX_CXXPublic
@@ -542,9 +542,9 @@ internal sealed partial class PackageParser
     // a data member; deep: with the members of a class-typed one (or an array of them), recursively
     private static FieldModel Field(FieldDecl field, bool deep, int depth)
     {
-      // a std::array as the C array it holds (MSVC's _Elems, libstdc++'s _M_elems): Roots_0, not
-      // Roots__Elems_0
-      var type = StdArrayElements(field.Type) ?? field.Type;
+      // a struct's std::array as the C array it holds (MSVC's _Elems, libstdc++'s _M_elems):
+      // Roots_0, not Roots__Elems_0; a proxy's stays one, which its property's typemaps take
+      var type = deep ? StdArrayElements(field.Type) ?? field.Type : field.Type;
       IReadOnlyList<FieldModel>? members = null;
       var element = type.CanonicalType;
       while (element is ConstantArrayType array)

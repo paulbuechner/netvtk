@@ -25,9 +25,9 @@ const string Usage = """
         what the parser sees in one module, parsed as generate parses it (development aid)
     generate  --vtk <dir> --core <netvtk-core> [--config config/modules.yaml] [--check] [names...]
         writes <netvtk-core>/src/SWIG_files/{wrapper,headers} for the named modules or libraries (default: the config's
-        libraries) and src/SWIG_files/{modules,classes}.json; skipped members go to log/skips/<module>.txt. --check:
-        write nothing, exit 1 if netvtk-core's files differ from the output. A module that doesn't parse fails the run,
-        which then writes nothing.
+        libraries) and src/SWIG_files/{modules,platforms,classes}.json; skipped members go to log/skips/<module>.txt.
+        --check: write nothing, exit 1 if netvtk-core's files differ from the output. A module that doesn't parse fails
+        the run, which then writes nothing.
     docs      --vtk <dir> --core <netvtk-core> --assembly <NetVtk.dll> --out <NetVtk.xml> [--xml <compiler's xml>] [--config config/modules.yaml]
         VTK's documentation comments as NetVtk's XML documentation file (IntelliSense), merged with the compiler's
         (--xml, the hand-written members').

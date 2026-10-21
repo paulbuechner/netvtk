@@ -140,7 +140,7 @@ internal sealed record FieldModel(string Name, CppType Type, long Offset, long S
                                   IReadOnlyList<FieldModel>? Members = null, bool IsPublic = false);
 
 /// <summary>Facts about a class that decide how it is wrapped.</summary>
-/// <param name="IsTransient">Derives from vtkObjectBase: a VTK object, reference-counted.</param>
+/// <param name="IsVtkObject">Derives from vtkObjectBase: a VTK object, reference-counted.</param>
 /// <param name="IsAbstract">Has pure virtual methods: no constructors.</param>
 /// <param name="HasPublicDestructor">
 /// Public destructor and a usable <c>operator delete</c>; otherwise SWIG needs %nodefaultdtor.
@@ -165,7 +165,7 @@ internal sealed record FieldModel(string Name, CppType Type, long Offset, long S
 /// The class declares its destructor, which may use what the object refers to (a scope's closes
 /// it); an implicit one doesn't.
 /// </param>
-internal sealed record ClassTraits(bool IsTransient, bool IsAbstract, bool HasPublicDestructor,
+internal sealed record ClassTraits(bool IsVtkObject, bool IsAbstract, bool HasPublicDestructor,
                                    bool IsCopyable, bool IsCreatable = true,
                                    bool HasDefaultConstructor = true, bool IsMovable = false,
                                    bool DeclaresDestructor = false);

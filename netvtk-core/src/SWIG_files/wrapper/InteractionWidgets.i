@@ -725,6 +725,7 @@
 %netvtk_sized_return(double, double, 4)
 %netvtk_sized_return(double, double, 6)
 %netvtk_sized_return(int, int, 2)
+%netvtk_vector(double, double)
 
 %{
 // Layout guards for the C# structs in src/NetVtk/InteractionWidgets/: a mismatch fails the native build.
@@ -2366,6 +2367,8 @@ public:
   void SetTranslationAxisOff();
   bool IsTranslationConstrained();
   void GetActors(vtkPropCollection* arg0);
+  std::vector< double > GetCorners();
+  void SetCorners(std::vector< double > points);
   void SetRotationAxisMode(int _arg);
   int GetRotationAxisMode();
   void SetRotationAxisModeToFree();
@@ -3388,6 +3391,11 @@ public:
 class vtkContourRepresentationNode {
 public:
   vtkContourRepresentationNode();
+  double WorldPosition[3];
+  double WorldOrientation[9];
+  double NormalizedDisplayPosition[2];
+  int Selected;
+  vtkIdType PointId;
 };
 
 class vtkContourRepresentationInternals {
@@ -6671,6 +6679,12 @@ public:
 class vtkPolygonalSurfacePointPlacerNode {
 public:
   vtkPolygonalSurfacePointPlacerNode();
+  double WorldPosition[3];
+  double SurfaceWorldPosition[3];
+  vtkIdType CellId;
+  vtkIdType PointId;
+  double ParametricCoords[3];
+  vtkPolyData* const PolyData;
 };
 
 class vtkPolygonalSurfacePointPlacer : public vtkPolyDataPointPlacer {

@@ -1,0 +1,1 @@
+A hardware selection (`vtkHardwareSelector`) in a multisampled window no longer re-creates the window's render framebuffer twice: a capture is over twice as fast, memory no longer grows with every capture, and a `vtkWin32OpenGLDXRenderWindow` sharing that framebuffer goes on delivering frames.

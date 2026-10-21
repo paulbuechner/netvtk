@@ -2,8 +2,14 @@
 libraries:
   Core: [Core]
   Demo: [Demo]
+  Win32: [DemoWin32]
+platforms:
+  Win32: win
 exclude_headers: [vtkWin32*.h]
 modules:
   Core:
     exclude_methods: [vtkObjectBase::Register, vtkObjectBase::UnRegister, vtkObjectBase::Delete]
     directors: [vtkCommand]
+  DemoWin32:
+    vtk_module: Demo
+    headers: [vtkWin32DemoRender*.h]

@@ -44,7 +44,7 @@ internal sealed partial class TypeRegistry
         .Select(m => m.Groups[2].Value)
     ];
 
-    var transients = Named("vtk_object").ToHashSet();
+    var vtkObjects = Named("vtk_object").ToHashSet();
     var valueClasses = Named("netvtk_valueclass");
     HashSet<string> noDefault =
       [.. NoDefaultPattern().Matches(text).Select(m => m.Groups[1].Value)];
@@ -58,7 +58,7 @@ internal sealed partial class TypeRegistry
     foreach (Match m in ClassPattern().Matches(text))
     {
       var name = m.Groups[1].Value;
-      var kind = transients.Contains(name) ? WrapKind.Transient :
+      var kind = vtkObjects.Contains(name) ? WrapKind.VtkObject :
         valueClasses.Contains(name) ? WrapKind.ValueClass : WrapKind.Plain;
       // InterfaceWriter.ClassMacros: both without a default constructor, the value wrapper alone
       // for a move-only class
