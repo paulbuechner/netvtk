@@ -1,1 +1,0 @@
-More fields of VTK's value classes are properties: C arrays and `std::array`s (C# arrays of their length), vectors, structs, value classes and `vtkSmartPointer`s to read and write; C strings, pointers to other classes and other addresses to read. Vectors of value classes are written too.
