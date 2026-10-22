@@ -1,14 +1,16 @@
-# The release PR, like changesets' "Version Packages": whenever changelog entries (netvtk-core/changes/) reach main, this
-# writes the next release into CHANGELOG.md (build.py release: <VTK version>.<next revision>) and opens or updates the pull
-# request "Release NetVtk <version>" into main. On next, like changesets' pre mode, the release is the next prerelease
-# (<version>-next.1, -next.2, ...), its pull request into next. Merging it makes build.yml publish that version.
+# The release PR, like changesets' "Version Packages": on any push to main with entries (netvtk-core/changes/) pending,
+# this writes the next release into CHANGELOG.md (build.py release: <VTK version>.<next revision>) and opens or updates
+# the pull request "Release NetVtk <version>" into main. On next, like changesets' pre mode, the release is the next
+# prerelease (<version>-next.1, -next.2, ...), its pull request into next. Merging it makes build.yml publish that
+# version.
 # Needs Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
 name: release PR
 
 on:
+  # every push, not only one with entries: the pull request is rebuilt on the pushed commit (create-pull-request resets
+  # its branch onto the base), so the release commit comes after everything it releases
   push:
     branches: [main, next]
-    paths: ["netvtk-core/changes/**"]
   workflow_dispatch:
     inputs:
       prerelease:
