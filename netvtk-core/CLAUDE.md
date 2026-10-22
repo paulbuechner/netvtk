@@ -16,6 +16,7 @@ python build.py docs --triplet x64-windows   # VTK's doc comments -> artifacts/d
 python build.py pack --rids win-x64,win-x86  # NuGet into artifacts/packages (CI packs all four RIDs)
 python build.py test-package --arch x64      # the packed NetVtk as an app consumes it
 python test/test_build.py                    # build.py's version, changelog, SWIG message and library folder rules
+python test/test_interop.py                  # NetVtkInterop.i's macros through SWIG, as another binding uses them
 python build.py registry                     # versions/ at the repository root after a committed port change (--check: CI)
 # the hand-written C++ against .clang-format, with CI's clang-format (a venv under .tools/)
 python -m venv .tools/clang-format && .tools/clang-format/Scripts/python -m pip install clang-format==20.1.8

@@ -126,7 +126,7 @@ template <class T> class vtkSmartPointer;
 
 %define %netvtk_build(NAME)
 %{
-%#include <vtkNetVtkBuild.h>
+#include <vtkNetVtkBuild.h>
 %}
 %inline %{
 inline const char* NAME() { return NETVTK_VTK_BUILD; }

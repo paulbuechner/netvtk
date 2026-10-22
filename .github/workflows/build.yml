@@ -154,6 +154,7 @@ jobs:
       - name: SWIG and native libraries
         shell: bash
         run: |
+          python test/test_interop.py
           python build.py generate
           python build.py native --triplet ${{ matrix.triplet }}
 
