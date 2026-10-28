@@ -9,6 +9,7 @@
                                                     # --prune-archives: then drop the cached archives no install uses
     python build.py generate                        # SWIG: src/SWIG_files/wrapper/*.i -> build/generated
     python build.py native --triplet x64-windows    # CMake: NetVtk<Group> libraries + VTK's -> artifacts/runtimes/<rid>/native
+    python build.py third-party                     # pack/vtk-components.json from VTK's sources, after a VTK update
     python build.py test --arch x64 [--framework net10.0|net8.0|net6.0|net48|net472|net462|net35] [--no-rendering]
                                                     # no --framework on Windows: every framework, net35 on CLR 2,
                                                     # plus the net45/net452 library builds
@@ -37,6 +38,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+
+import sbom
 
 ROOT = Path(__file__).resolve().parent
 TOOLS = ROOT / ".tools"
@@ -468,6 +471,8 @@ def cmd_native(args: argparse.Namespace) -> None:
     if not host_is_windows():
         flatten_stage(stage)
     write_notices(args.triplet, stage, stage.parent / "THIRD-PARTY-NOTICES.txt")
+    sbom.write(stage, stage.parent / sbom.FILE, f"NetVtk.runtime.{rid}", prefix=prefix, vtk=vtk_version(),
+               repository=REPOSITORY)
 
 
 def loader_name(library: Path) -> str | None:
@@ -511,6 +516,13 @@ def write_notices(triplet: str, stage: Path, target: Path) -> None:
             parts.append((f"VTK: {path.relative_to(licenses).as_posix()}", path.read_text(encoding="utf-8", errors="replace")))
     rule = "=" * 78
     target.write_text("".join(f"{rule}\n{name}\n{rule}\n\n{text.strip()}\n\n" for name, text in parts), encoding="utf-8")
+
+
+def cmd_third_party(args: argparse.Namespace) -> None:
+    vtk = vtk_version()
+    source = Path(args.source) if args.source else sbom.vtk_source(VCPKG_STATE / "buildtrees", vtk)
+    count = sbom.write_vtk_components(source, vtk)
+    print(f"{sbom.VTK_COMPONENTS.relative_to(ROOT)}: {count} license folders from {source}")
 
 
 # --------------------------------------------------------------------------- test
@@ -885,6 +897,7 @@ def cmd_pack(args: argparse.Namespace) -> None:
 
     ci = ["-p:ContinuousIntegrationBuild=true"] if os.environ.get("GITHUB_ACTIONS") else []
     for rid in rids:
+        sbom.stamp(natives(rid).parent / sbom.FILE, version)
         run(["dotnet", "pack", ROOT / "pack" / "NetVtk.runtime.csproj", "-c", "Release", "-o", PACKAGES,
              f"-p:NetVtkRid={rid}", f"-p:Version={version}", *ci])
 
@@ -1014,6 +1027,9 @@ def parser() -> argparse.ArgumentParser:
                             help="then delete the binary cache archives no install root uses (CI)")
         sp.set_defaults(fn=fn)
     sub.add_parser("generate", help="SWIG over the modules -> build/generated").set_defaults(fn=cmd_generate)
+    tpy = sub.add_parser("third-party", help="pack/vtk-components.json: VTK's modules and built-in libraries, from its sources")
+    tpy.add_argument("--source", help="VTK's source tree; default: the one vcpkg extracted under .vcpkg/buildtrees")
+    tpy.set_defaults(fn=cmd_third_party)
     t = sub.add_parser("test", help="the NetVtk tests")
     t.add_argument("--arch", default="x64", choices=["x64", "x86", "arm64"])
     t.add_argument("--framework", choices=FRAMEWORKS, help="default: all (Windows), the .NET ones elsewhere")

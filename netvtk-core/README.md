@@ -81,4 +81,4 @@ docker run --rm -v netvtk-vcpkg-linux:/src/.vcpkg netvtk-linux
 
 ## License
 
-MIT ([LICENSE](LICENSE)). VTK and the libraries it builds in: [NOTICE](NOTICE), and `THIRD-PARTY-NOTICES.txt` in each runtime package.
+MIT ([LICENSE](LICENSE)). VTK and the libraries it builds in: [NOTICE](NOTICE), and `THIRD-PARTY-NOTICES.txt` in each runtime package, beside `sbom/sbom.cdx.json`, a CycloneDX SBOM of every file it ships and the libraries they belong to.

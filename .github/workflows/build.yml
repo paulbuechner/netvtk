@@ -79,9 +79,11 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      # the version and release rules this job publishes by
-      - name: build.py's tests
-        run: python test/test_build.py
+      # the version and release rules this job publishes by, and the runtime packages' SBOM
+      - name: build.py's and sbom.py's tests
+        run: |
+          python test/test_build.py
+          python test/test_sbom.py
       # the vcpkg registry other projects build the same VTK from: versions/ names the committed port
       - name: vcpkg registry
         run: python build.py registry --check

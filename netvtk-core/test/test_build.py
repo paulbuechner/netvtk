@@ -6,12 +6,14 @@ unittest)."""
 from __future__ import annotations
 
 import importlib.util
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
 CORE = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(CORE))  # build.py imports sbom.py beside it
 _spec = importlib.util.spec_from_file_location("build", CORE / "build.py")
 build = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build)
