@@ -1,1 +1,0 @@
-Each runtime package carries sbom/sbom.cdx.json, a CycloneDX SBOM with the data fields of BSI TR-03183-2: every file of the package with its SHA-512, under NetVtk, VTK or the library VTK builds in that it belongs to, each with its creator, version, license and its texts, copyright and source, for an application's own SBOM, where NuGet lists the package alone.
