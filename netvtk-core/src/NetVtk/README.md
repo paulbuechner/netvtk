@@ -6,7 +6,7 @@ C# bindings for the [Visualization Toolkit](https://vtk.org) (VTK) 9.7.1, genera
 dotnet add package NetVtk
 ```
 
-One AnyCPU package for .NET Framework 3.5 and 4.5+, .NET 6, 8 and 10, and netstandard2.0, with the natives for Windows (x64, x86), Linux (x64) and macOS (arm64).
+One AnyCPU package for .NET Framework 3.5 and 4.5+, .NET 6, 8 and 10, and netstandard2.0, with the natives for Windows (x64, x86), Linux (x64) and macOS (arm64). A .NET Framework app gets its architecture's natives in `x86\` or `x64\`; `<NetVtkModules>Common;Filters;Rendering</NetVtkModules>` ships only those of the libraries an app uses.
 
 ```csharp
 using Vtk;

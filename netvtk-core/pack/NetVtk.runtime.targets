@@ -1,0 +1,110 @@
+<Project>
+
+  <!--
+    Which natives of the NetVtk.runtime packages an app gets. build.py pack packs this file into each runtime package as
+    NetVtk.runtime.<rid>.targets, beside NetVtk.runtime.<rid>.natives.targets: the package's natives, each with all it
+    loads (loads.py). Each package adds its own items; the targets are the same in all of them, the last import's stand.
+
+    NetVtkModules (optional): the NetVtk modules the app uses, as a list (Common;Filters;Rendering). Only their
+    libraries, NetVtkRuntime and what these load are copied, on .NET Framework and .NET; empty: all of them.
+    NetVtkRequiredNative items (with Rid): natives that another package's natives load (a binding's on NetVtk), kept with
+    all they load.
+
+    .NET Framework ignores runtimes\: the Windows packages copy their natives into x64\ or x86\ next to the app, where
+    NetVtk's loader looks, for the architecture the app runs as only: x86 for PlatformTarget x86 or an AnyCPU exe with
+    Prefer32Bit, x64 for x64, the RuntimeIdentifier's without a PlatformTarget, both for AnyCPU (the SDK leaves an exe
+    without a PlatformTarget AnyCPU, natives in runtimes\ notwithstanding). NuGet's copies of a RuntimeIdentifier's
+    natives next to the app are dropped: second copies, which Windows would find first for every library the process
+    loads.
+  -->
+
+  <Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).natives.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).natives.targets')" />
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and $(MSBuildThisFileName.StartsWith('NetVtk.runtime.win-'))">
+    <_NetVtkFrameworkNative Include="$(MSBuildThisFileDirectory)..\..\runtimes\$(MSBuildThisFileName.Substring(15))\native\*"
+                            Package="$(MSBuildThisFileName)" Arch="$(MSBuildThisFileName.Substring(19))" />
+  </ItemGroup>
+
+  <!-- the architectures a .NET Framework app runs as: ;x86; ;x64; or both -->
+  <Target Name="_NetVtkFrameworkArchitectures">
+    <PropertyGroup>
+      <_NetVtkPlatform>$(PlatformTarget.ToLowerInvariant())</_NetVtkPlatform>
+      <_NetVtkPlatform Condition="'$(_NetVtkPlatform)' == '' and $(RuntimeIdentifier.ToLowerInvariant().EndsWith('-x86'))">x86</_NetVtkPlatform>
+      <_NetVtkPlatform Condition="'$(_NetVtkPlatform)' == '' and $(RuntimeIdentifier.ToLowerInvariant().EndsWith('-x64'))">x64</_NetVtkPlatform>
+      <_NetVtkPlatform Condition="('$(_NetVtkPlatform)' == '' or '$(_NetVtkPlatform)' == 'anycpu') and '$(Prefer32Bit)' == 'true' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe' or '$(OutputType)' == 'AppContainerExe')">x86</_NetVtkPlatform>
+      <_NetVtkArchitectures>;$(_NetVtkPlatform);</_NetVtkArchitectures>
+      <_NetVtkArchitectures Condition="'$(_NetVtkPlatform)' == '' or '$(_NetVtkPlatform)' == 'anycpu'">;x86;x64;</_NetVtkArchitectures>
+    </PropertyGroup>
+  </Target>
+
+  <!-- the natives NetVtkModules needs, as ;<package>/<file>; in lower case; empty without NetVtkModules -->
+  <Target Name="_NetVtkSelectNatives" Condition="'$(NetVtkModules)' != ''">
+    <ItemGroup>
+      <_NetVtkModule Include="$(NetVtkModules);Runtime" />
+      <_NetVtkModuleLibrary Include="%(_NetVtkNative.Module)" Package="%(_NetVtkNative.Package)" File="%(_NetVtkNative.Identity)"
+                            Condition="'%(_NetVtkNative.Module)' != ''" />
+      <_NetVtkUnknownModule Include="@(_NetVtkModule)" Exclude="@(_NetVtkModuleLibrary)" />
+      <_NetVtkKnownModule Include="@(_NetVtkModuleLibrary->Distinct())" Exclude="Runtime" />
+    </ItemGroup>
+    <Error Condition="'@(_NetVtkUnknownModule)' != ''"
+           Text="NetVtkModules names @(_NetVtkUnknownModule->'%(Identity)', ', '), which NetVtk has no module of. Its modules: @(_NetVtkKnownModule, ', ')." />
+    <ItemGroup>
+      <_NetVtkOtherModule Include="@(_NetVtkModuleLibrary)" Exclude="@(_NetVtkModule)" />
+      <_NetVtkModuleLibrary Remove="@(_NetVtkOtherModule)" />
+      <_NetVtkRoot Include="@(_NetVtkModuleLibrary->'%(Package)/%(File)')" />
+      <_NetVtkRoot Include="@(NetVtkRequiredNative->'NetVtk.runtime.%(Rid)/%(Identity)')" />
+      <_NetVtkLoader Include="@(_NetVtkNative->'%(Package)/%(Identity)')" />
+      <_NetVtkUnrooted Include="@(_NetVtkLoader)" Exclude="@(_NetVtkRoot)" />
+      <_NetVtkLoader Remove="@(_NetVtkUnrooted)" />
+      <_NetVtkLoaded Include="%(_NetVtkLoader.Loads)" Package="%(_NetVtkLoader.Package)" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_NetVtkNeeded>;@(_NetVtkLoaded->'%(Package)/%(Identity)');</_NetVtkNeeded>
+      <_NetVtkNeeded>$(_NetVtkNeeded.ToLowerInvariant())</_NetVtkNeeded>
+    </PropertyGroup>
+  </Target>
+
+  <!-- .NET Framework: the natives of the app's architectures into x64\ and x86\ -->
+  <Target Name="_NetVtkFrameworkNatives" BeforeTargets="AssignTargetPaths"
+          DependsOnTargets="_NetVtkFrameworkArchitectures;_NetVtkSelectNatives" Condition="'@(_NetVtkFrameworkNative)' != ''">
+    <ItemGroup>
+      <None Include="@(_NetVtkFrameworkNative)" Link="%(_NetVtkFrameworkNative.Arch)\%(_NetVtkFrameworkNative.Filename)%(_NetVtkFrameworkNative.Extension)"
+            CopyToOutputDirectory="PreserveNewest" Visible="false"
+            Condition="$(_NetVtkArchitectures.Contains(';%(_NetVtkFrameworkNative.Arch);')) and ('$(_NetVtkNeeded)' == '' or $(_NetVtkNeeded.Contains($([System.String]::Copy(';%(_NetVtkFrameworkNative.Package)/%(_NetVtkFrameworkNative.Filename)%(_NetVtkFrameworkNative.Extension);').ToLowerInvariant()))))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- NuGet's copies: none next to a .NET Framework app (an exe's default platform ignores natives in runtimes\); on .NET,
+       those NetVtkModules needs, next to the app for a RuntimeIdentifier, else in runtimes\<rid>\native\ -->
+  <Target Name="_NetVtkPackageNatives" AfterTargets="ResolvePackageAssets" DependsOnTargets="_NetVtkSelectNatives">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"
+                            Condition="$([System.String]::Copy('%(NativeCopyLocalItems.NuGetPackageId)').ToLowerInvariant().StartsWith('netvtk.runtime.')) and ('$(TargetFrameworkIdentifier)' == '.NETFramework' or ('$(_NetVtkNeeded)' != '' and !$(_NetVtkNeeded.Contains($([System.String]::Copy(';%(NativeCopyLocalItems.NuGetPackageId)/%(NativeCopyLocalItems.Filename)%(NativeCopyLocalItems.Extension);').ToLowerInvariant())))))" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)"
+                                    Condition="$([System.String]::Copy('%(RuntimeTargetsCopyLocalItems.NuGetPackageId)').ToLowerInvariant().StartsWith('netvtk.runtime.')) and '$(_NetVtkNeeded)' != '' and !$(_NetVtkNeeded.Contains($([System.String]::Copy(';%(RuntimeTargetsCopyLocalItems.NuGetPackageId)/%(RuntimeTargetsCopyLocalItems.Filename)%(RuntimeTargetsCopyLocalItems.Extension);').ToLowerInvariant())))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- .NET Framework: the same for the natives a referenced project hands on (an AnyCPU library's x64\ and x86\) -->
+  <Target Name="_NetVtkReferencedNatives" AfterTargets="GetCopyToOutputDirectoryItems"
+          DependsOnTargets="_NetVtkFrameworkArchitectures;_NetVtkSelectNatives" Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <ItemGroup>
+      <_NetVtkCopied Include="@(_SourceItemsToCopyToOutputDirectory);@(_SourceItemsToCopyToOutputDirectoryAlways);@(_SourceItemsToCopyToOutputDirectoryIfDifferent)" />
+      <_NetVtkCopied Condition="$([System.String]::Copy('%(_NetVtkCopied.FullPath)').ToLowerInvariant().Contains('\netvtk.runtime.win-x64')) and $([System.String]::Copy('%(_NetVtkCopied.FullPath)').ToLowerInvariant().Contains('\runtimes\win-x64\native\'))">
+        <_NetVtkArch>x64</_NetVtkArch>
+      </_NetVtkCopied>
+      <_NetVtkCopied Condition="$([System.String]::Copy('%(_NetVtkCopied.FullPath)').ToLowerInvariant().Contains('\netvtk.runtime.win-x86')) and $([System.String]::Copy('%(_NetVtkCopied.FullPath)').ToLowerInvariant().Contains('\runtimes\win-x86\native\'))">
+        <_NetVtkArch>x86</_NetVtkArch>
+      </_NetVtkCopied>
+      <_NetVtkUnwanted Include="@(_NetVtkCopied)"
+                       Condition="'%(_NetVtkCopied._NetVtkArch)' != '' and (!$(_NetVtkArchitectures.Contains(';%(_NetVtkCopied._NetVtkArch);')) or ('$(_NetVtkNeeded)' != '' and !$(_NetVtkNeeded.Contains($([System.String]::Copy(';netvtk.runtime.win-%(_NetVtkCopied._NetVtkArch)/%(_NetVtkCopied.Filename)%(_NetVtkCopied.Extension);').ToLowerInvariant())))))" />
+      <_SourceItemsToCopyToOutputDirectory Remove="@(_NetVtkUnwanted)" />
+      <_SourceItemsToCopyToOutputDirectoryAlways Remove="@(_NetVtkUnwanted)" />
+      <_SourceItemsToCopyToOutputDirectoryIfDifferent Remove="@(_NetVtkUnwanted)" />
+      <AllItemsFullPathWithTargetPath Remove="@(_NetVtkUnwanted)" />
+      <_NetVtkCopied Remove="@(_NetVtkCopied)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -6,7 +6,8 @@
 
 - Windows: install the [Visual C++ 2015-2022 runtime](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist) for the process's architecture.
 - Check that the platform has natives: win-x64, win-x86, linux-x64, osx-arm64. See [Platforms](platforms.md).
-- .NET Framework: the build copies the natives into `x64\` and `x86\` next to the app; check they're there.
+- .NET Framework: the build copies the natives into `x86\` or `x64\` next to the app, for the architecture it builds for ([Platforms](platforms.md#natives)); check the process's folder is there. A host that loads the app as a plugin in a process of the other architecture needs `PlatformTarget` set to the host's.
+- With `NetVtkModules`, a module it doesn't list has no natives: add the module of the class whose call failed ([Platforms](platforms.md#modules)).
 - `NetVtkWin32`, inside a `TypeInitializationException`, off Windows: its classes, the Windows render windows, are Windows' only.
 
 **`BadImageFormatException`**

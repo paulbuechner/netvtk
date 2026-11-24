@@ -1,6 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Paul Büchner
 // SPDX-License-Identifier: MIT
 
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+
 // NUnit
 using NUnit.Framework;
 
@@ -11,7 +18,9 @@ namespace NetVtk.PackageTests;
 
 /// <summary>
 /// The installed package works: the natives land where NetVtk's loader looks (runtimes\ on .NET,
-/// x64\ or x86\ on .NET Framework) and resolve their VTK dependencies there.
+/// x64\ or x86\ on .NET Framework) and resolve their VTK dependencies there. build.py
+/// test-package runs them for one architecture (a RuntimeIdentifier), then again with
+/// NetVtkModules.
 /// </summary>
 [TestFixture]
 public class PackageTests
@@ -53,5 +62,53 @@ public class PackageTests
 
     // Assert
     Assert.That(window.IsA("vtkOpenGLRenderWindow"), Is.EqualTo(1));
+  }
+
+#if NETFRAMEWORK
+  [Test]
+  public void Natives_LieInTheProcessArchitecturesFolderOnly()
+  {
+    // Arrange
+    var directory = AppDomain.CurrentDomain.BaseDirectory;
+
+    // Act
+    var copies = Directory.GetFiles(directory, "NetVtkRuntime.dll", SearchOption.AllDirectories);
+
+    // Assert
+    Assert.That(copies, Is.EqualTo(new[] { Path.Combine(NativeDirectory(), "NetVtkRuntime.dll") }));
+  }
+#endif
+
+#if NETVTK_MODULES
+  [Test]
+  public void Natives_HoldTheSelectedModulesLibrariesOnly()
+  {
+    // Arrange (Win32's library is in the Windows packages only)
+    var modules = typeof(PackageTests).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+      .Single(attribute => attribute.Key == "NetVtkModules").Value!.Split(';')
+      .Where(module => module != "Win32" || RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
+    // a module's library on any system, not the managed NetVtk.dll
+    var library = new Regex(@"^(?:lib)?NetVtk([A-Za-z0-9]+)\.(?:dll|so|dylib)$");
+
+    // Act
+    var libraries = Directory.GetFiles(NativeDirectory())
+      .Select(file => library.Match(Path.GetFileName(file)))
+      .Where(match => match.Success)
+      .Select(match => match.Groups[1].Value);
+
+    // Assert
+    Assert.That(libraries, Is.EquivalentTo(modules.Append("Runtime")));
+  }
+#endif
+
+  // where the natives are: x64\ or x86\ on .NET Framework, next to the app on .NET (a RID)
+  private static string NativeDirectory()
+  {
+#if NETFRAMEWORK
+    var architecture = IntPtr.Size == 8 ? "x64" : "x86";
+    return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, architecture);
+#else
+    return AppContext.BaseDirectory;
+#endif
   }
 }

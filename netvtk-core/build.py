@@ -39,6 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
+import loads
 import sbom
 
 ROOT = Path(__file__).resolve().parent
@@ -850,6 +851,8 @@ def cmd_release(args: argparse.Namespace) -> None:
 
 # --------------------------------------------------------------------------- packages
 PACKAGE_TESTS = ROOT / "test" / "NetVtk.PackageTests"
+# the NetVtk modules the package tests use, for their run with NetVtkModules (Win32 is in the Windows packages only)
+PACKAGE_TEST_MODULES = "Common;Filters;Rendering;Win32"
 
 
 def pack_notes(version: str) -> str:
@@ -898,6 +901,8 @@ def cmd_pack(args: argparse.Namespace) -> None:
     ci = ["-p:ContinuousIntegrationBuild=true"] if os.environ.get("GITHUB_ACTIONS") else []
     for rid in rids:
         sbom.stamp(natives(rid).parent / sbom.FILE, version)
+        # what each native loads, for the targets' module selection (NetVtkModules)
+        loads.write(natives(rid), natives(rid).parent / "natives.targets", f"NetVtk.runtime.{rid}", "NetVtk")
         run(["dotnet", "pack", ROOT / "pack" / "NetVtk.runtime.csproj", "-c", "Release", "-o", PACKAGES,
              f"-p:NetVtkRid={rid}", f"-p:Version={version}", *ci])
 
@@ -942,9 +947,11 @@ def cmd_test_package(args: argparse.Namespace) -> None:
     if not (PACKAGES / "NetVtk.version.props").exists():
         sys.exit("no packages: run build.py pack first")
     frameworks = ["net8.0", "net48"] if host_is_windows() else ["net8.0"]
-    for framework in frameworks:
-        run(["dotnet", "test", PACKAGE_TESTS / "NetVtk.PackageTests.csproj", "-c", "Release", "--arch", args.arch,
-             "--framework", framework])
+    # all modules, then the ones the tests use (NetVtkModules from the environment: -p: splits values at ';')
+    for env in (None, dict(os.environ, NetVtkModules=PACKAGE_TEST_MODULES)):
+        for framework in frameworks:
+            run(["dotnet", "test", PACKAGE_TESTS / "NetVtk.PackageTests.csproj", "-c", "Release", "--arch", args.arch,
+                 "--framework", framework], env=env)
 
 
 # --------------------------------------------------------------------------- the vcpkg registry

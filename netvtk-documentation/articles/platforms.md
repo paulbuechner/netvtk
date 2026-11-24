@@ -14,7 +14,27 @@ One AnyCPU assembly per framework: .NET Framework 3.5, 4.5, 4.5.2 and 4.6.2, .NE
 | linux-x64 | glibc 2.35 or newer; X11, GL and EGL libraries | .NET 10, 8 and 6, in Docker (Ubuntu 24.04) |
 | osx-arm64 | macOS 14 or newer | .NET 10, 8 and 6 on CI's macOS runners, without the rendering tests (no display) |
 
-.NET apps load the natives from `runtimes/<rid>/native`. .NET Framework apps get them in `x64\` and `x86\` next to the app, so AnyCPU works; NetVtk picks the folder for the process.
+.NET apps load the natives from `runtimes/<rid>/native`, or from next to the app when it has a `RuntimeIdentifier`. .NET Framework apps get them in `x86\` or `x64\` next to the app, only for the architecture the app runs as; NetVtk picks the folder for the process.
+
+| .NET Framework project | Natives |
+|---|---|
+| `PlatformTarget` x86, or an AnyCPU exe with `Prefer32Bit` | `x86\` |
+| `PlatformTarget` x64 | `x64\` |
+| AnyCPU: a library, a test project, an exe without `Prefer32Bit` | `x86\` and `x64\` |
+
+Without a `PlatformTarget`, the `RuntimeIdentifier` decides. NuGet's copies of a `RuntimeIdentifier`'s natives next to a .NET Framework app are left out (Windows would search them first for every library the process loads), and so are the natives of another architecture that a referenced AnyCPU library hands on.
+
+### Modules
+
+An app that uses some of NetVtk's libraries can ship their natives only: name their modules in `NetVtkModules`.
+
+```xml
+<PropertyGroup>
+  <NetVtkModules>Common;Filters;Rendering</NetVtkModules>
+</PropertyGroup>
+```
+
+The modules are Common, Filters, IO, Rendering, Interaction and, on Windows, Win32: the libraries without `NetVtk` ([Modules](modules.md) lists their classes). The build copies their `NetVtk<Module>` libraries, NetVtkRuntime and the VTK libraries these load, on .NET Framework and .NET, from every runtime package. List every module whose classes the app uses: a call into another fails with `DllNotFoundException` for its `NetVtk<Module>`. Unset, every module ships. Common and Rendering take 56 of the 84 files on win-x64 (86 of 109 MB). On macOS each library loads nearly all of VTK, so little stays out.
 
 `vtkIdType` is 64 bits on every platform, win-x86 too: ids and counts are `long` everywhere.
 
