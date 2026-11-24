@@ -175,7 +175,7 @@ public class ResultTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void Scene_Offscreen_DrawsTheResult()
   {
     // Arrange (the whole scene, as a viewer shows it, in a window off the screen)

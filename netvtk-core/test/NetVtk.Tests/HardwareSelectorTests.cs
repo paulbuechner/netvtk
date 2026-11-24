@@ -24,7 +24,7 @@ public class HardwareSelectorTests
   private const int Size = 64;
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void GetPixelInformation_WhereTheSphereShows_IsItsActor()
   {
     // Arrange
@@ -44,7 +44,7 @@ public class HardwareSelectorTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void GetPixelInformation_WhereTheBackgroundShows_IsNotValid()
   {
     // Arrange
@@ -63,7 +63,7 @@ public class HardwareSelectorTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void GetPixelInformation_ActorsSharingAnEdgeWithSamples_NamesNoThirdActor()
   {
     // Arrange (the two halves of a square, cut along its diagonal)
@@ -83,7 +83,7 @@ public class HardwareSelectorTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void GetPixelInformation_ActorsCrossingWithSamples_NamesNoThirdActor()
   {
     // Arrange (two squares tilted against each other, which cross along a slanted line)
@@ -104,7 +104,7 @@ public class HardwareSelectorTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void CaptureBuffers_WithSamples_KeepsTheWindowsSamples()
   {
     // Arrange

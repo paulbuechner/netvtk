@@ -40,7 +40,7 @@ public class ReverseZFeatureTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void Render_ReverseZ_DrawsWhatConventionalDepthDraws([Values] Feature feature)
   {
     // Arrange
@@ -60,7 +60,7 @@ public class ReverseZFeatureTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void WorldPointPicker_OnAQuadWithReverseZ_FindsItsPoint()
   {
     // Arrange (a quad over the view 10 below the eye)
@@ -77,7 +77,7 @@ public class ReverseZFeatureTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void PropPicker_TwoQuadsWithReverseZ_PicksTheNearer()
   {
     // Arrange (the far quad added last)

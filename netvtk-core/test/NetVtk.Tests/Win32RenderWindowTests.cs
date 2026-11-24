@@ -49,7 +49,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void RenderWindow_IsTheWin32Window()
   {
     // Arrange (the object factory's, which another library made: the Win32 window where one
@@ -79,7 +79,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void Initialize_SharesTexturesOnTheCallersDevice()
   {
     AssumeInterop();
@@ -104,7 +104,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void Render_Locked_DrawsTheConeIntoTheSharedTexture()
   {
     AssumeInterop();
@@ -164,7 +164,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void Render_AfterCaptureBuffersWithSamples_ReachesTheSharedTexture()
   {
     AssumeInterop();
@@ -234,7 +234,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void SetSize_AnotherWindowCurrent_BothWindowsKeepTheirCones()
   {
     AssumeInterop();
@@ -264,7 +264,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void Dispose_FramebufferShared_ReleasesTheCallersDevice()
   {
     AssumeInterop();
@@ -290,7 +290,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void SetAdapterId_NoSuchAdapter_VtkFindsNone()
   {
     AssumeInterop();
@@ -318,7 +318,7 @@ public class Win32RenderWindowTests
 
   [Test]
   [Platform("Win")]
-  [Category("Rendering")]
+  [Rendering]
   public void RegisterSharedRenderFramebuffer_NoInteropDevice_ReportsAnError()
   {
     // Arrange (no adapter has this id: the window opens no interop device, as on a driver without

@@ -24,7 +24,7 @@ public class RenderTimerLogTests
   private const string WindowRender = "vtkRenderWindow::Render";
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void PopFirstReadyFrame_AfterRenders_HasTheRendersTimedEvent()
   {
     // Arrange
@@ -44,7 +44,7 @@ public class RenderTimerLogTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void Events_OfTheWindowsRender_HoldTheRenderersRender()
   {
     // Arrange (the renderer renders inside the window's render)

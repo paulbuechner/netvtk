@@ -29,7 +29,7 @@ public class VolumeTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void SmartVolumeMapper_Offscreen_DrawsTheVolume()
   {
     // Arrange (a 32 x 32 x 32 image whose value grows along x, red and opaque where it's high)

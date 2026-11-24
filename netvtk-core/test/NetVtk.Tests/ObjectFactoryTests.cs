@@ -79,30 +79,24 @@ public class ObjectFactoryTests
 }
 
 /// <summary>
-/// The assembly's entry point on .NET, in place of the test SDK's empty one: <c>first
-/// &lt;class&gt;</c> makes an object of the class before any other but VTK's output window (in
-/// NetVtkCommon, which registers no factories), and prints what its constructor made through the
-/// factory: a window's render timer and whether it is supported, a box representation's handle
-/// property.
+/// <c>first &lt;class&gt;</c>, in a process of its own (<see cref="Program"/>): makes an object of
+/// the class before any other but VTK's output window (in NetVtkCommon, which registers no
+/// factories), and prints what its constructor made through the factory: a window's render timer
+/// and whether it is supported, a box representation's handle property.
 /// </summary>
 internal static class FirstObject
 {
   public const string Command = "first";
 
-  private static int Main(string[] args)
+  public static int Make(string className)
   {
-    if (args.Length != 2 || args[0] != Command)
-    {
-      return 2;
-    }
-
     VtkOutput.Message += (_, e) => Console.Error.WriteLine($"{e.Kind}: {e.Text}");
-    switch (args[1])
+    switch (className)
     {
       case "vtkWin32OpenGLDXRenderWindow":
       case "vtkWin32OpenGLRenderWindow":
       {
-        using vtkWin32OpenGLRenderWindow window = args[1] == "vtkWin32OpenGLDXRenderWindow"
+        using vtkWin32OpenGLRenderWindow window = className == "vtkWin32OpenGLDXRenderWindow"
           ? new vtkWin32OpenGLDXRenderWindow()
           : new vtkWin32OpenGLRenderWindow();
         using var timer = window.GetRenderTimer();

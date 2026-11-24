@@ -44,7 +44,7 @@ public class PipelineTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void Render_Offscreen_DrawsTheActor()
   {
     // Arrange

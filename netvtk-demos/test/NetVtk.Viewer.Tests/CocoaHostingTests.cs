@@ -82,18 +82,18 @@ public class CocoaHostingTests
 }
 
 /// <summary>
-/// The assembly's entry point, in place of the test SDK's empty one: <c>cocoa</c> shows a red cone
-/// in a <see cref="CocoaViewerView"/> in a window's content view (320 x 200 points), on the main
-/// thread, and prints whose subview the view is, its size in pixels, the render window's pixels,
-/// the red ones among them and the render window's DPI.
+/// <c>cocoa</c>, in a process of its own (<see cref="Program"/>): shows a red cone in a
+/// <see cref="CocoaViewerView"/> in a window's content view (320 x 200 points), on the main thread,
+/// and prints whose subview the view is, its size in pixels, the render window's pixels, the red
+/// ones among them and the render window's DPI.
 /// </summary>
 internal static class CocoaHost
 {
   public const string Command = "cocoa";
 
-  private static int Main(string[] args)
+  public static int Run()
   {
-    if (args is not [Command] || !OperatingSystem.IsMacOS())
+    if (!OperatingSystem.IsMacOS())
     {
       return 2;
     }

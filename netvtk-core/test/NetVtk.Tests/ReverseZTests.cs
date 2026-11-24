@@ -22,9 +22,13 @@ namespace NetVtk.Tests;
 public class ReverseZTests
 {
   private const int Side = 64;
+  // macOS's OpenGL stops at 4.1, without glClipControl: VTK keeps the conventional depth there
+  private const string NoClipControl =
+    "no clip control in OpenGL 4.1: the depth stays conventional";
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
+  [Platform(Exclude = "MacOsX", Reason = NoClipControl)]
   public void Render_ClippingRangeOf10To8_DrawsQuadsAMillionthOfTheirDistanceApartInDepthOrder()
   {
     // Arrange (the far quad drawn last, 0.01 behind the near one at 10,000: a hundred-millionth of
@@ -48,7 +52,8 @@ public class ReverseZTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
+  [Platform(Exclude = "MacOsX", Reason = NoClipControl)]
   public void GetZbufferDataAtPoint_OverNothingAndAQuad_IsTheFarPlanesZeroAndTheQuadsReversedDepth()
   {
     // Arrange: a quad over the middle of the view
@@ -73,7 +78,8 @@ public class ReverseZTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
+  [Platform(Exclude = "MacOsX", Reason = NoClipControl)]
   public void DisplayToWorld_OfTheDepthRead_IsThePointDrawnThere()
   {
     // Arrange
@@ -94,7 +100,7 @@ public class ReverseZTests
   }
 
   [Test]
-  [Category("Rendering")]
+  [Rendering]
   public void Render_PolygonOffsets_DrawALineOverTheQuadItLiesOn()
   {
     // Arrange (VTK's global resolution, restored after)
