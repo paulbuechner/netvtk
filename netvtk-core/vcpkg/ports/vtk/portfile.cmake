@@ -15,6 +15,7 @@ vcpkg_from_github(
         0003-hardware-selector-keeps-the-render-framebuffer.patch
         0004-render-window-reverse-z.patch
         0005-reverse-z-where-depth-is-handled.patch
+        0006-render-timer-waits-for-a-context.patch
 )
 
 # NetVtk's module set

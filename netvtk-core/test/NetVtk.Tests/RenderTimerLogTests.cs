@@ -25,6 +25,24 @@ public class RenderTimerLogTests
 
   [Test]
   [Rendering]
+  public void FrameReady_BeforeTheFirstRender_IsFalse()
+  {
+    // Arrange (no render yet: the window has no OpenGL context, which on macOS VTK's check for
+    // Apple's query bug needs; the port's patch)
+    using var window = new vtkRenderWindow();
+    window.SetOffScreenRendering(1);
+    using var timer = window.GetRenderTimer();
+    timer.SetLoggingEnabled(true);
+
+    // Act
+    var ready = timer.FrameReady();
+
+    // Assert
+    Assert.That(ready, Is.False);
+  }
+
+  [Test]
+  [Rendering]
   public void PopFirstReadyFrame_AfterRenders_HasTheRendersTimedEvent()
   {
     // Arrange

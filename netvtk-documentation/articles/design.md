@@ -37,13 +37,14 @@ No maintained open-source .NET binding of VTK exists: Kitware's ActiViz is propr
 
 ## VTK's patches
 
-NetVtk builds Kitware's v9.7.1 with five patches (`netvtk-core/vcpkg/ports/vtk`), each with tests in netvtk-core. The members they add come last in their classes: a library compiled against VTK's unpatched headers finds every other member where it was.
+NetVtk builds Kitware's v9.7.1 with six patches (`netvtk-core/vcpkg/ports/vtk`), each with tests in netvtk-core. The members they add come last in their classes: a library compiled against VTK's unpatched headers finds every other member where it was.
 
 - **`vtkWin32OpenGLDXRenderWindow` makes its own OpenGL context current** before its interop calls (`Lock`, `Unlock`, registering and unregistering shared textures). VTK used whichever was current, while `WGL_NV_DX_interop` registers a texture name of the current context: a window resized after another rendered registered its texture in the other's context, and the process crashed a moment later. Without an interop device (a driver lacking the extension) it reports an error where it crashed.
 - **A deleted `vtkWin32OpenGLDXRenderWindow` closes its interop device:** its destructor unregisters the shared textures and closes the device while its context lives. VTK never closed it, and the device held the application's Direct3D device alive, with every texture made on it: about 100 MiB and 187 handles per window made and disposed.
 - **`vtkOpenGLHardwareSelector` keeps the render framebuffer:** in a multisampled window its passes render into the window's one-sample resolve framebuffer. VTK set the window's samples to 0 and back, which re-creates the render framebuffer twice per capture: a capture took 7.3 ms instead of 2.7 (2400x1500 pixels, 4x), memory grew by 172 MiB over the first 10, and a DX window's shared texture was no longer the one it rendered into. Disabling `GL_MULTISAMPLE` instead keeps the framebuffer but names a third actor where two surfaces cross: NVIDIA's driver tests depth per sample with multisampling disabled.
 - **Reverse Z,** `vtkRenderWindow::UseReverseZ` ([Rendering and hosting](rendering.md#reverse-z)). Fixed-point depth from 0 at the near plane to 1 at the far one resolves less and less toward the far plane, the more so the larger the clipping range's ratio: a viewer of a large model had to keep its near plane at a 20,000th of the far one, and clipped what the eye came close to.
 - **Reverse Z where depth is handled:** impostor spheres and tubes, the sphere and stick mappers, 2-D actors and labels, the translucent passes, SSAO, EDL, depth of field, point fill, shadow maps, the skybox, pickers, widgets and the volume mappers follow `UseReverseZ`. Without it, 2-D actors fell outside the clip range and vanished, translucency peeled in the wrong order and pickers took the farthest depth for the nearest.
+- **The render timer asks OpenGL with a context only** (Apple): before a window's first render, a render timer's `FrameReady` asked OpenGL for its vendor without a context, and the process crashed. It reports no bug until a context can tell.
 
 ## Open
 
