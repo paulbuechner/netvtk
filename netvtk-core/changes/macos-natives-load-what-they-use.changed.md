@@ -1,0 +1,1 @@
+On macOS, the NetVtk libraries and VTK's load only the libraries they use, as on Windows and Linux: each NetVtk library loaded 79 of NetVtk.runtime.osx-arm64's 83 files, NetVtkCommon now loads 17 and NetVtkRendering 54.

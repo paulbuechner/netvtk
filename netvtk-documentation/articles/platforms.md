@@ -34,7 +34,7 @@ An app that uses some of NetVtk's libraries can ship their natives only: name th
 </PropertyGroup>
 ```
 
-The modules are Common, Filters, IO, Rendering, Interaction and, on Windows, Win32: the libraries without `NetVtk` ([Modules](modules.md) lists their classes). The build copies their `NetVtk<Module>` libraries, NetVtkRuntime and the VTK libraries these load, on .NET Framework and .NET, from every runtime package. List every module whose classes the app uses: a call into another fails with `DllNotFoundException` for its `NetVtk<Module>`. Unset, every module ships. Common and Rendering take 56 of the 84 files on win-x64 (86 of 109 MB). On macOS each library loads nearly all of VTK, so little stays out.
+The modules are Common, Filters, IO, Rendering, Interaction and, on Windows, Win32: the libraries without `NetVtk` ([Modules](modules.md) lists their classes). The build copies their `NetVtk<Module>` libraries, NetVtkRuntime and the VTK libraries these load, on .NET Framework and .NET, from every runtime package. List every module whose classes the app uses: a call into another fails with `DllNotFoundException` for its `NetVtk<Module>`. Unset, every module ships. Common and Rendering take 56 of the 84 files on win-x64 (86 of 109 MB), 55 of the 83 on osx-arm64 (195 of 239 MB).
 
 `vtkIdType` is 64 bits on every platform, win-x86 too: ids and counts are `long` everywhere.
 

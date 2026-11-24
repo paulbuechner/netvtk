@@ -99,6 +99,20 @@ public class PackageTests
     // Assert
     Assert.That(libraries, Is.EquivalentTo(modules.Append("Runtime")));
   }
+
+  [Test]
+  public void Natives_LeaveOutWhatOnlyModulesLeftOutLoad()
+  {
+    // Arrange: IO's readers and Interaction's widgets, which build.py's selection leaves out and
+    // none of its modules loads
+    var leftOut = new Regex(@"^(?:lib)?vtk(?:IOExodus|IOCGNSReader|InteractionWidgets)-");
+
+    // Act
+    var files = Directory.GetFiles(NativeDirectory()).Select(Path.GetFileName).ToList();
+
+    // Assert
+    Assert.That(files, Has.None.Matches(leftOut));
+  }
 #endif
 
   // where the natives are: x64\ or x86\ on .NET Framework, next to the app on .NET (a RID)

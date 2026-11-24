@@ -46,6 +46,9 @@ function(netvtk_library name)
     target_compile_options(${name} PRIVATE -fvisibility=hidden -Wno-deprecated-declarations)
     if(APPLE)
       set_target_properties(${name} PROPERTIES BUILD_RPATH "@loader_path" INSTALL_RPATH "@loader_path")
+      # ld64 records every dylib it links, used or not: each library would load all of VTK (NetVtkModules). Drops those
+      # no symbol comes from, as MSVC and Ubuntu's GCC (--as-needed) do; VTK_MODULE_INIT names its factories' symbols.
+      target_link_options(${name} PRIVATE "LINKER:-dead_strip_dylibs")
     else()
       set_target_properties(${name} PROPERTIES BUILD_RPATH "$ORIGIN" INSTALL_RPATH "$ORIGIN")
       # GNU ld allows undefined symbols in a shared library; a member VTK lacks here would fail at its first call
