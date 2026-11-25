@@ -32,6 +32,7 @@
 #include <vtkScalarsToColors.h>
 #include <vtkStringArray.h>
 #include <vtkTextActor.h>
+#include <vtkTextMapper.h>
 #include <vtkTextProperty.h>
 #include <vtkTexturedActor2D.h>
 #include <vtkViewport.h>

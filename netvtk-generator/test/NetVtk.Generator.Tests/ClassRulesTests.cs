@@ -37,17 +37,17 @@ public class ClassRulesTests
     Assert.That(listed, Is.True);
   }
 
-  [TestCase(true, true, true, nameof(WrapKind.Transient))]
+  [TestCase(true, true, true, nameof(WrapKind.VtkObject))]
   [TestCase(false, true, true, nameof(WrapKind.ValueClass))]
   [TestCase(false, false, true, nameof(WrapKind.Plain))]
   [TestCase(false, true, false, nameof(WrapKind.Plain))]
-  public void KindOf_WrapsCopiesThatProxiesCanDelete(bool transient, bool copyable,
+  public void KindOf_WrapsCopiesThatProxiesCanDelete(bool vtkObject, bool copyable,
                                                      bool publicDestructor, string expected)
   {
     // Arrange (a proxy owns its value class's copies, so it must be able to delete them)
     var c = new ClassModel("Demo_Thing", "Demo_Thing.hxx", [], ValueTraits with
     {
-      IsTransient = transient,
+      IsVtkObject = vtkObject,
       IsCopyable = copyable,
       HasPublicDestructor = publicDestructor,
     }, [], []);

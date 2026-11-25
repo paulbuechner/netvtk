@@ -97,7 +97,7 @@ internal static class Program
 - general, geometry, modeling and source filters;
 - VTK's XML and legacy files, Exodus II and CGNS;
 - OpenGL rendering with annotations, text and volumes; interaction styles and widgets;
-- 3D views in a WPF or Avalonia window on Windows, an X11 window on Linux;
+- 3D views in a WPF or Avalonia window on Windows, an X11 window on Linux, an NSView on macOS;
 - arrays copied in bulk (`FromArray`, `ToArray`, `AsSpan`), C# handlers for VTK's events, VTK's messages as a .NET event;
 - other SWIG bindings building on NetVtk's proxies (`swig/interop/NetVtkInterop.i` in the package).
 

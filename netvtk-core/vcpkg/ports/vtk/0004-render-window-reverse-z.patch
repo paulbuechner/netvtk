@@ -1,0 +1,497 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Paul=20B=C3=BCchner?=
+ <45827409+paulbuechner@users.noreply.github.com>
+Date: Sun, 18 Oct 2026 20:30:00 +0200
+Subject: [PATCH] vtkRenderWindow: Reverse Z
+
+A fixed-point depth buffer that runs from 0 at the near plane to 1 at
+the far one resolves less and less toward the far plane, the more so
+the larger the ratio of the clipping range: an application that lets
+the eye come close to a large model has to keep the near plane out,
+and clips what comes nearer. Reversed, floating-point depth, 1 at the
+near plane and 0 at the far one in 32-bit floats, resolves about the
+same share of any distance.
+
+vtkRenderWindow::UseReverseZ turns it on. An OpenGL window then makes
+its render, display and resolve framebuffers with 32-bit float depth
+(their blits need one format), clips depth to [0, 1] (glClipControl:
+OpenGL 4.5 or ARB_clip_control; without them the window turns it off
+and warns), tests GL_GEQUAL and clears depth to 0. vtkOpenGLCamera's
+projection maps the near plane to 1 and the far one to 0, and so do
+vtkRenderer's conversions between view and display coordinates, so a
+depth read from the window goes back to its world point as before. The
+polydata mapper's coincident-topology offsets turn round, a unit of the
+constant one 1/65000 of the fragment's own depth, as it is of the depth
+range in a fixed-point buffer.
+
+What computes, compares or converts depth itself follows in the next
+patch.
+
+The new members come last in their classes, so a library built against
+the unpatched headers finds every other member where it was.
+---
+ Rendering/Core/vtkRenderWindow.cxx            |  1 +
+ Rendering/Core/vtkRenderWindow.h              | 22 +++++++++++
+ Rendering/Core/vtkRenderer.cxx                | 24 ++++++++----
+ Rendering/Core/vtkRenderer.h                  |  9 +++++
+ Rendering/OpenGL2/vtkOpenGLCamera.cxx         | 10 +++--
+ Rendering/OpenGL2/vtkOpenGLCamera.h           |  3 ++
+ .../OpenGL2/vtkOpenGLFramebufferObject.cxx    | 15 +++++--
+ .../OpenGL2/vtkOpenGLFramebufferObject.h      |  5 ++-
+ Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx | 12 +++++-
+ Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx   | 39 +++++++++++++++++--
+ Rendering/OpenGL2/vtkOpenGLRenderWindow.h     |  3 ++
+ Rendering/OpenGL2/vtkOpenGLRenderer.cxx       |  4 +-
+ Rendering/OpenGL2/vtkTextureObject.cxx        | 11 ++++--
+ Rendering/OpenGL2/vtkTextureObject.h          |  5 ++-
+ 14 files changed, 135 insertions(+), 28 deletions(-)
+
+diff --git a/Rendering/Core/vtkRenderWindow.cxx b/Rendering/Core/vtkRenderWindow.cxx
+index 571ccf9..1ee5296 100644
+--- a/Rendering/Core/vtkRenderWindow.cxx
++++ b/Rendering/Core/vtkRenderWindow.cxx
+@@ -611,6 +611,7 @@ void vtkRenderWindow::PrintSelf(ostream& os, vtkIndent indent)
+   os << indent << "Number of Layers: " << this->NumberOfLayers << "\n";
+   os << indent << "AlphaBitPlanes: " << (this->AlphaBitPlanes ? "On" : "Off") << endl;
+   os << indent << "UseSRGBColorSpace: " << (this->UseSRGBColorSpace ? "On" : "Off") << endl;
++  os << indent << "UseReverseZ: " << (this->UseReverseZ ? "On" : "Off") << endl;
+ 
+   os << indent << "AnaglyphColorSaturation: " << this->AnaglyphColorSaturation << "\n";
+   os << indent << "AnaglyphColorMask: " << this->AnaglyphColorMask[0] << " , "
+diff --git a/Rendering/Core/vtkRenderWindow.h b/Rendering/Core/vtkRenderWindow.h
+index 9d4366f..6e80475 100644
+--- a/Rendering/Core/vtkRenderWindow.h
++++ b/Rendering/Core/vtkRenderWindow.h
+@@ -686,6 +686,26 @@ public:
+   vtkBooleanMacro(UseSRGBColorSpace, bool);
+   ///@}
+ 
++  ///@{
++  /**
++   * Set/Get whether depth runs from 1 at the near clipping plane to 0 at the far one, in
++   * floating point (reverse Z). A fixed-point depth buffer that runs from 0 to 1 resolves less and
++   * less toward the far plane, the more so the larger the ratio of the clipping range; reversed,
++   * floating-point depth resolves about the same share of any distance, so the near plane may come
++   * very close to the eye. The renderers' projections, depth clears and depth tests follow, and so
++   * do their conversions between display and world coordinates: a depth read from the window goes
++   * back to its world point as before. An OpenGL window needs OpenGL 4.5 or ARB_clip_control, and
++   * turns it off with a warning without them; changing it makes the window's framebuffers again,
++   * their depth in floats, which a blit of it into another framebuffer needs there too. Mappers
++   * that compute their fragments' depth themselves (points as spheres, lines as tubes, the sphere
++   * and stick mappers) and the depth peeling, order independent translucency, SSAO and EDL passes
++   * assume the conventional depth. Default is off.
++   */
++  vtkGetMacro(UseReverseZ, bool);
++  vtkSetMacro(UseReverseZ, bool);
++  vtkBooleanMacro(UseReverseZ, bool);
++  ///@}
++
+   enum : vtkTypeUInt16
+   {
+     PhysicalToWorldMatrixModified = vtkCommand::UserEvent + 200
+@@ -856,6 +876,8 @@ private:
+   void operator=(const vtkRenderWindow&) = delete;
+ 
+   vtkNew<vtkStereoCompositor> StereoCompositor;
++
++  bool UseReverseZ = false;
+ };
+ 
+ VTK_ABI_NAMESPACE_END
+diff --git a/Rendering/Core/vtkRenderer.cxx b/Rendering/Core/vtkRenderer.cxx
+index e8cf1ad..c92e2d0 100644
+--- a/Rendering/Core/vtkRenderer.cxx
++++ b/Rendering/Core/vtkRenderer.cxx
+@@ -1537,9 +1537,11 @@ void vtkRenderer::ViewToWorld(double& x, double& y, double& z)
+     return;
+   }
+ 
+-  // get the perspective transformation from the active camera
+-  vtkMatrix4x4* matrix =
+-    this->ActiveCamera->GetCompositeProjectionTransformMatrix(this->GetTiledAspectRatio(), 0, 1);
++  // get the perspective transformation from the active camera, to the display's depth: the window's
++  // depth buffer runs from 1 at the near plane to 0 at the far one when reversed
++  const bool reverseZ = this->RenderWindow && this->RenderWindow->GetUseReverseZ();
++  vtkMatrix4x4* matrix = this->ActiveCamera->GetCompositeProjectionTransformMatrix(
++    this->GetTiledAspectRatio(), reverseZ ? 1 : 0, reverseZ ? 0 : 1);
+ 
+   // use the inverse matrix
+   vtkMatrix4x4::Invert(*matrix->Element, mat);
+@@ -2110,16 +2112,20 @@ const std::array<double, 16>& vtkRenderer::GetViewTransformMatrix()
+ const std::array<double, 16>& vtkRenderer::GetCompositeProjectionTransformationMatrix()
+ {
+   const double tiledAspectRatio = this->GetTiledAspectRatio();
++  const bool reverseZ = this->RenderWindow && this->RenderWindow->GetUseReverseZ();
+   if (tiledAspectRatio != this->LastCompositeProjectionTransformationMatrixTiledAspectRatio ||
+     this->LastCompositeProjectionTransformationMatrixCameraModified !=
+-      this->ActiveCamera->GetMTime())
++      this->ActiveCamera->GetMTime() ||
++    reverseZ != this->LastCompositeProjectionTransformationMatrixReverseZ)
+   {
+     vtkMatrix4x4::DeepCopy(this->CompositeProjectionTransformationMatrix.data(),
+-      this->ActiveCamera->GetCompositeProjectionTransformMatrix(tiledAspectRatio, 0, 1));
++      this->ActiveCamera->GetCompositeProjectionTransformMatrix(
++        tiledAspectRatio, reverseZ ? 1 : 0, reverseZ ? 0 : 1));
+ 
+     this->LastCompositeProjectionTransformationMatrixTiledAspectRatio = tiledAspectRatio;
+     this->LastCompositeProjectionTransformationMatrixCameraModified =
+       this->ActiveCamera->GetMTime();
++    this->LastCompositeProjectionTransformationMatrixReverseZ = reverseZ;
+   }
+   return this->CompositeProjectionTransformationMatrix;
+ }
+@@ -2128,14 +2134,18 @@ const std::array<double, 16>& vtkRenderer::GetCompositeProjectionTransformationM
+ const std::array<double, 16>& vtkRenderer::GetProjectionTransformationMatrix()
+ {
+   const double tiledAspectRatio = this->GetTiledAspectRatio();
++  const bool reverseZ = this->RenderWindow && this->RenderWindow->GetUseReverseZ();
+   if (tiledAspectRatio != this->LastProjectionTransformationMatrixTiledAspectRatio ||
+-    this->LastProjectionTransformationMatrixCameraModified != this->ActiveCamera->GetMTime())
++    this->LastProjectionTransformationMatrixCameraModified != this->ActiveCamera->GetMTime() ||
++    reverseZ != this->LastProjectionTransformationMatrixReverseZ)
+   {
+     vtkMatrix4x4::DeepCopy(this->ProjectionTransformationMatrix.data(),
+-      this->ActiveCamera->GetProjectionTransformMatrix(tiledAspectRatio, 0, 1));
++      this->ActiveCamera->GetProjectionTransformMatrix(
++        tiledAspectRatio, reverseZ ? 1 : 0, reverseZ ? 0 : 1));
+ 
+     this->LastProjectionTransformationMatrixTiledAspectRatio = tiledAspectRatio;
+     this->LastProjectionTransformationMatrixCameraModified = this->ActiveCamera->GetMTime();
++    this->LastProjectionTransformationMatrixReverseZ = reverseZ;
+   }
+   return this->ProjectionTransformationMatrix;
+ }
+diff --git a/Rendering/Core/vtkRenderer.h b/Rendering/Core/vtkRenderer.h
+index fae2f39..8d2344b 100644
+--- a/Rendering/Core/vtkRenderer.h
++++ b/Rendering/Core/vtkRenderer.h
+@@ -1326,6 +1326,15 @@ private:
+   double EnvironmentUp[3] = { 0.0, 1.0, 0.0 };
+   double EnvironmentRight[3] = { 1.0, 0.0, 0.0 };
+ 
++  ///@{
++  /**
++   * Whether the window's depth was reversed when this->CompositeProjectionTransformationMatrix and
++   * this->ProjectionTransformationMatrix were set (vtkRenderWindow::UseReverseZ).
++   */
++  bool LastCompositeProjectionTransformationMatrixReverseZ = false;
++  bool LastProjectionTransformationMatrixReverseZ = false;
++  ///@}
++
+   vtkRenderer(const vtkRenderer&) = delete;
+   void operator=(const vtkRenderer&) = delete;
+ };
+diff --git a/Rendering/OpenGL2/vtkOpenGLCamera.cxx b/Rendering/OpenGL2/vtkOpenGLCamera.cxx
+index cb3557c..6c4b737 100644
+--- a/Rendering/OpenGL2/vtkOpenGLCamera.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLCamera.cxx
+@@ -112,9 +112,12 @@ void vtkOpenGLCamera::PrintSelf(ostream& os, vtkIndent indent)
+ void vtkOpenGLCamera::GetKeyMatrices(vtkRenderer* ren, vtkMatrix4x4*& wcvc, vtkMatrix3x3*& normMat,
+   vtkMatrix4x4*& vcdc, vtkMatrix4x4*& wcdc)
+ {
++  // reversed depth clips to [0, 1] with the near plane at 1 (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ = ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ();
++
+   // has the camera changed?
+   if (ren != this->LastRenderer || this->MTime > this->KeyMatrixTime ||
+-    ren->GetMTime() > this->KeyMatrixTime)
++    ren->GetMTime() > this->KeyMatrixTime || reverseZ != this->LastReverseZ)
+   {
+     this->WCVCMatrix->DeepCopy(this->GetModelViewTransformMatrix());
+ 
+@@ -129,14 +132,15 @@ void vtkOpenGLCamera::GetKeyMatrices(vtkRenderer* ren, vtkMatrix4x4*& wcvc, vtkM
+ 
+     this->WCVCMatrix->Transpose();
+ 
+-    this->VCDCMatrix->DeepCopy(
+-      this->GetProjectionTransformMatrix(ren->GetTiledAspectRatio(), -1, 1));
++    this->VCDCMatrix->DeepCopy(this->GetProjectionTransformMatrix(
++      ren->GetTiledAspectRatio(), reverseZ ? 1 : -1, reverseZ ? 0 : 1));
+     this->VCDCMatrix->Transpose();
+ 
+     vtkMatrix4x4::Multiply4x4(this->WCVCMatrix, this->VCDCMatrix, this->WCDCMatrix);
+ 
+     this->KeyMatrixTime.Modified();
+     this->LastRenderer = ren;
++    this->LastReverseZ = reverseZ;
+   }
+ 
+   wcvc = this->WCVCMatrix;
+diff --git a/Rendering/OpenGL2/vtkOpenGLCamera.h b/Rendering/OpenGL2/vtkOpenGLCamera.h
+index 10f17a2..a167766 100644
+--- a/Rendering/OpenGL2/vtkOpenGLCamera.h
++++ b/Rendering/OpenGL2/vtkOpenGLCamera.h
+@@ -54,6 +54,9 @@ protected:
+ private:
+   vtkOpenGLCamera(const vtkOpenGLCamera&) = delete;
+   void operator=(const vtkOpenGLCamera&) = delete;
++
++  // whether the window's depth was reversed when the key matrices were made
++  bool LastReverseZ = false;
+ };
+ 
+ #define vtkOpenGLCamera_OVERRIDE_ATTRIBUTES vtkOpenGLCamera::CreateOverrideAttributes()
+diff --git a/Rendering/OpenGL2/vtkOpenGLFramebufferObject.cxx b/Rendering/OpenGL2/vtkOpenGLFramebufferObject.cxx
+index c0b26c0..3af738f 100644
+--- a/Rendering/OpenGL2/vtkOpenGLFramebufferObject.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLFramebufferObject.cxx
+@@ -1503,7 +1503,7 @@ bool vtkOpenGLFramebufferObject::PopulateFramebuffer(int width, int height)
+ 
+ bool vtkOpenGLFramebufferObject::PopulateFramebuffer(int width, int height, bool useTextures,
+   int numberOfColorAttachments, int colorDataType, bool wantDepthAttachment, int depthBitplanes,
+-  int multisamples, bool wantStencilAttachment)
++  int multisamples, bool wantStencilAttachment, bool floatDepth)
+ {
+   // MAX_DEPTH_TEXTURE_SAMPLES
+   this->Bind();
+@@ -1537,7 +1537,11 @@ bool vtkOpenGLFramebufferObject::PopulateFramebuffer(int width, int height, bool
+       depth->SetMagnificationFilter(vtkTextureObject::Nearest);
+       if (wantStencilAttachment)
+       {
+-        depth->AllocateDepthStencil(this->LastSize[0], this->LastSize[1]);
++        depth->AllocateDepthStencil(this->LastSize[0], this->LastSize[1], floatDepth);
++      }
++      else if (floatDepth)
++      {
++        depth->AllocateDepth(this->LastSize[0], this->LastSize[1], vtkTextureObject::Float32);
+       }
+       else
+       {
+@@ -1586,7 +1590,12 @@ bool vtkOpenGLFramebufferObject::PopulateFramebuffer(int width, int height, bool
+       depth->SetContext(this->Context);
+       if (wantStencilAttachment)
+       {
+-        depth->Create(GL_DEPTH24_STENCIL8, this->LastSize[0], this->LastSize[1], multisamples);
++        depth->Create(floatDepth ? GL_DEPTH32F_STENCIL8 : GL_DEPTH24_STENCIL8, this->LastSize[0],
++          this->LastSize[1], multisamples);
++      }
++      else if (floatDepth)
++      {
++        depth->Create(GL_DEPTH_COMPONENT32F, this->LastSize[0], this->LastSize[1], multisamples);
+       }
+       else
+       {
+diff --git a/Rendering/OpenGL2/vtkOpenGLFramebufferObject.h b/Rendering/OpenGL2/vtkOpenGLFramebufferObject.h
+index 913d441..bd685e4 100644
+--- a/Rendering/OpenGL2/vtkOpenGLFramebufferObject.h
++++ b/Rendering/OpenGL2/vtkOpenGLFramebufferObject.h
+@@ -297,12 +297,13 @@ public:
+   /**
+    * Convenience method to populate a framebuffer with
+    * attachments created as well. Returns true if a
+-   * complete valid Framebuffer was created
++   * complete valid Framebuffer was created. With floatDepth, the depth attachment holds 32-bit
++   * floats whatever depthBitplanes asks for (with a stencil, 32-bit floats and 8 bits of stencil).
+    */
+   bool PopulateFramebuffer(int width, int height);
+   bool PopulateFramebuffer(int width, int height, bool useTextures, int numberOfColorAttachments,
+     int colorDataType, bool wantDepthAttachment, int depthBitplanes, int multisamples,
+-    bool wantStencilAttachment = false);
++    bool wantStencilAttachment = false, bool floatDepth = false);
+   ///@}
+ 
+   /**
+diff --git a/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx b/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx
+index facc18d..5900ace 100644
+--- a/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx
+@@ -2509,6 +2509,10 @@ void vtkOpenGLPolyDataMapper::ReplaceShaderCoincidentOffset(
+   // cache the result taking into account FBO changes etc.
+   if (factor != 0.0 || offset != 0.0)
+   {
++    // reversed depth (vtkRenderWindow::UseReverseZ) is the greater the nearer, in floats: the
++    // offsets turn round, a unit of the constant one 1/65000 of the fragment's own depth, as it is
++    // of the depth range in a fixed-point buffer
++    const bool reverseZ = ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ();
+     std::string FSSource = shaders[vtkShader::Fragment]->GetSource();
+     vtkShaderProgram::Substitute(FSSource, "//VTK::Coincident::Dec",
+       "uniform float cOffset;\n"
+@@ -2520,7 +2524,9 @@ void vtkOpenGLPolyDataMapper::ReplaceShaderCoincidentOffset(
+         "  //VTK::UniformFlow::Impl\n" // for other replacements
+       );
+       vtkShaderProgram::Substitute(FSSource, "//VTK::Depth::Impl",
+-        "gl_FragDepth = gl_FragDepth + cFactor*cscale + 1.0*cOffset/65000.0;\n");
++        reverseZ
++          ? "gl_FragDepth = gl_FragDepth - cFactor*cscale - cOffset*gl_FragDepth/65000.0;\n"
++          : "gl_FragDepth = gl_FragDepth + cFactor*cscale + 1.0*cOffset/65000.0;\n");
+     }
+     else
+     {
+@@ -2529,7 +2535,9 @@ void vtkOpenGLPolyDataMapper::ReplaceShaderCoincidentOffset(
+         "  //VTK::UniformFlow::Impl\n" // for other replacements
+       );
+       vtkShaderProgram::Substitute(FSSource, "//VTK::Depth::Impl",
+-        "gl_FragDepth = gl_FragCoord.z + cFactor*cscale + 1.0*cOffset/65000.0;\n");
++        reverseZ
++          ? "gl_FragDepth = gl_FragCoord.z - cFactor*cscale - cOffset*gl_FragCoord.z/65000.0;\n"
++          : "gl_FragDepth = gl_FragCoord.z + cFactor*cscale + 1.0*cOffset/65000.0;\n");
+     }
+     shaders[vtkShader::Fragment]->SetSource(FSSource);
+   }
+diff --git a/Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx b/Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx
+index 32dcb83..f73f620 100644
+--- a/Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx
+@@ -1998,6 +1998,26 @@ void vtkOpenGLRenderWindow::Start()
+   this->GetState()->vtkglBlendFuncSeparate(
+     GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+ 
++  // reverse Z clips depth to [0, 1], the near plane at 1, so that the floats of the depth buffer
++  // keep their precision toward the far plane; nearer is greater
++#ifndef GL_ES_VERSION_3_0
++  const bool clipControl = GLAD_GL_VERSION_4_5 || GLAD_GL_ARB_clip_control;
++#else
++  const bool clipControl = false;
++#endif
++  if (this->GetUseReverseZ() && !clipControl)
++  {
++    vtkWarningMacro("Reverse Z needs OpenGL 4.5 or ARB_clip_control: the depth stays conventional.");
++    this->SetUseReverseZ(false);
++  }
++#ifndef GL_ES_VERSION_3_0
++  if (clipControl)
++  {
++    glClipControl(GL_LOWER_LEFT, this->GetUseReverseZ() ? GL_ZERO_TO_ONE : GL_NEGATIVE_ONE_TO_ONE);
++  }
++#endif
++  this->GetState()->vtkglDepthFunc(this->GetUseReverseZ() ? GL_GEQUAL : GL_LEQUAL);
++
+   // creates or resizes the framebuffer
+   this->Size[0] = (this->Size[0] > 0 ? this->Size[0] : 300);
+   this->Size[1] = (this->Size[1] > 0 ? this->Size[1] : 300);
+@@ -2780,7 +2800,7 @@ int vtkOpenGLRenderWindow::SetZbufferData(int x1, int y1, int x2, int y2, float*
+   this->GetState()->PopDrawFramebufferBinding();
+ 
+   ostate->vtkglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+-  ostate->vtkglDepthFunc(GL_LEQUAL);
++  ostate->vtkglDepthFunc(this->GetUseReverseZ() ? GL_GEQUAL : GL_LEQUAL);
+ 
+   return VTK_OK;
+ }
+@@ -2833,6 +2853,17 @@ int vtkOpenGLRenderWindow::CreateFramebuffers(int width, int height)
+     this->RenderFramebuffer->ReleaseGraphicsResources(this);
+   }
+ 
++  // reversed depth is in floats, conventional in fixed point: the framebuffers that blit depth to
++  // each other are made again when it changes
++  const int reverseZ = this->GetUseReverseZ() ? 1 : 0;
++  if (this->LastUseReverseZ != -1 && this->LastUseReverseZ != reverseZ)
++  {
++    this->RenderFramebuffer->ReleaseGraphicsResources(this);
++    this->DisplayFramebuffer->ReleaseGraphicsResources(this);
++    this->ResolveFramebuffer->ReleaseGraphicsResources(this);
++  }
++  this->LastUseReverseZ = reverseZ;
++
+   if (!this->RenderFramebuffer->GetFBOIndex())
+   {
+     // verify that our multisample setting does not exceed the hardware
+@@ -2859,7 +2890,7 @@ int vtkOpenGLRenderWindow::CreateFramebuffers(int width, int height)
+ #endif
+       1, VTK_UNSIGNED_CHAR,                    // 1 color buffer uchar
+       true, this->RenderBufferTargetDepthSize, // depth buffer
+-      this->MultiSamples, this->StencilCapable != 0);
++      this->MultiSamples, this->StencilCapable != 0, reverseZ != 0);
+     this->LastMultiSamples = this->MultiSamples;
+     this->GetState()->PopFramebufferBindings();
+   }
+@@ -2875,7 +2906,7 @@ int vtkOpenGLRenderWindow::CreateFramebuffers(int width, int height)
+       true,                                    // textures
+       2, VTK_UNSIGNED_CHAR,                    // 1 color buffer uchar
+       true, this->RenderBufferTargetDepthSize, // depth buffer
+-      0, this->StencilCapable != 0);
++      0, this->StencilCapable != 0, reverseZ != 0);
+     this->GetState()->PopFramebufferBindings();
+   }
+   else
+@@ -2890,7 +2921,7 @@ int vtkOpenGLRenderWindow::CreateFramebuffers(int width, int height)
+       true,                                    // textures
+       1, VTK_UNSIGNED_CHAR,                    // 1 color buffer uchar
+       true, this->RenderBufferTargetDepthSize, // depth buffer
+-      0, this->StencilCapable != 0);
++      0, this->StencilCapable != 0, reverseZ != 0);
+     this->GetState()->PopFramebufferBindings();
+   }
+ 
+diff --git a/Rendering/OpenGL2/vtkOpenGLRenderWindow.h b/Rendering/OpenGL2/vtkOpenGLRenderWindow.h
+index cb82332..f1d00b5 100644
+--- a/Rendering/OpenGL2/vtkOpenGLRenderWindow.h
++++ b/Rendering/OpenGL2/vtkOpenGLRenderWindow.h
+@@ -684,6 +684,9 @@ private:
+   // Keeping `State` private so the only way to access it is through
+   // `this->GetState()`.
+   vtkOpenGLState* State;
++
++  // the depth the framebuffers were made with: -1 none yet, 1 reversed (floats), 0 conventional
++  int LastUseReverseZ = -1;
+ };
+ #if !(defined(__APPLE__) || defined(__ANDROID__) || defined(__EMSCRIPTEN__))
+ #define vtkOpenGLRenderWindow_OVERRIDE_ATTRIBUTES vtkOpenGLRenderWindow::CreateOverrideAttributes()
+diff --git a/Rendering/OpenGL2/vtkOpenGLRenderer.cxx b/Rendering/OpenGL2/vtkOpenGLRenderer.cxx
+index 0985ff7..08a0e75 100644
+--- a/Rendering/OpenGL2/vtkOpenGLRenderer.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLRenderer.cxx
+@@ -804,7 +804,9 @@ void vtkOpenGLRenderer::Clear()
+ 
+   if (!this->GetPreserveDepthBuffer())
+   {
+-    ostate->vtkglClearDepth(static_cast<GLclampf>(1.0));
++    // the far plane: 0 in reversed depth
++    const bool reverseZ = this->RenderWindow && this->RenderWindow->GetUseReverseZ();
++    ostate->vtkglClearDepth(static_cast<GLclampf>(reverseZ ? 0.0 : 1.0));
+     clear_mask |= GL_DEPTH_BUFFER_BIT;
+     ostate->vtkglDepthMask(GL_TRUE);
+   }
+diff --git a/Rendering/OpenGL2/vtkTextureObject.cxx b/Rendering/OpenGL2/vtkTextureObject.cxx
+index 9b7d943..c375a33 100644
+--- a/Rendering/OpenGL2/vtkTextureObject.cxx
++++ b/Rendering/OpenGL2/vtkTextureObject.cxx
+@@ -2112,7 +2112,8 @@ bool vtkTextureObject::AllocateDepth(unsigned int width, unsigned int height, in
+   return true;
+ }
+ 
+-bool vtkTextureObject::AllocateDepthStencil(unsigned int width, unsigned int height)
++bool vtkTextureObject::AllocateDepthStencil(
++  unsigned int width, unsigned int height, bool floatDepth)
+ {
+   assert("pre: context_exists" && this->GetContext() != nullptr);
+ 
+@@ -2123,8 +2124,8 @@ bool vtkTextureObject::AllocateDepthStencil(unsigned int width, unsigned int hei
+ #endif
+ 
+   this->Format = GL_DEPTH_STENCIL;
+-  this->Type = GL_UNSIGNED_INT_24_8;
+-  this->InternalFormat = GL_DEPTH24_STENCIL8;
++  this->Type = floatDepth ? GL_FLOAT_32_UNSIGNED_INT_24_8_REV : GL_UNSIGNED_INT_24_8;
++  this->InternalFormat = floatDepth ? GL_DEPTH32F_STENCIL8 : GL_DEPTH24_STENCIL8;
+ 
+   this->Width = width;
+   this->Height = height;
+@@ -2427,7 +2428,9 @@ void vtkTextureObject::CopyFromFrameBuffer(
+       /* colorDataType = */ VTK_UNSIGNED_CHAR,
+       /* wantDepthAttachment = */ true,
+       /* depthBitplanes = */ 24,
+-      /* multisamples = */ 0);
++      /* multisamples = */ 0,
++      /* wantStencilAttachment = */ false,
++      /* floatDepth = */ this->Context->GetUseReverseZ());
+ 
+     // PopulateFramebuffer changes active read/write buffer bindings,
+     // hence we restore the read buffer bindings to read from the original
+diff --git a/Rendering/OpenGL2/vtkTextureObject.h b/Rendering/OpenGL2/vtkTextureObject.h
+index b62b42b..b106b76 100644
+--- a/Rendering/OpenGL2/vtkTextureObject.h
++++ b/Rendering/OpenGL2/vtkTextureObject.h
+@@ -331,9 +331,10 @@ public:
+   bool AllocateDepth(unsigned int width, unsigned int height, int internalFormat);
+ 
+   /**
+-   * Create a 2D septh stencil texture but does not initialize its values.
++   * Create a 2D septh stencil texture but does not initialize its values: 24-bit depth, or 32-bit
++   * floats with floatDepth, and 8 bits of stencil.
+    */
+-  bool AllocateDepthStencil(unsigned int width, unsigned int height);
++  bool AllocateDepthStencil(unsigned int width, unsigned int height, bool floatDepth = false);
+ 
+   /**
+    * Create a 1D color texture but does not initialize its values.

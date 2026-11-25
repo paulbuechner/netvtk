@@ -12,14 +12,16 @@ namespace NetVtk.Viewer.Avalonia;
 
 /// <summary>
 /// The viewer's native window in Avalonia's layout: a Win32 child window on Windows, an X11 child
-/// window on Linux, whose events a timer reads. Avalonia creates the native control once the
-/// window shows, and may create it again after the control moves: the viewer lives with each.
+/// window on Linux, whose events a timer reads, an NSView on macOS. Avalonia creates the native
+/// control once the window shows, and may create it again after the control moves: the viewer
+/// lives with each.
 /// </summary>
 public sealed class ViewerHost : NativeControlHost
 {
   private ViewerWindow? _window;
   private X11ViewerWindow? _x11Window;
   private DispatcherTimer? _x11Events;
+  private CocoaViewerView? _cocoaView;
 
   /// <summary>The viewer, once the native control exists.</summary>
   public VtkViewer? Viewer { get; private set; }
@@ -50,6 +52,15 @@ public sealed class ViewerHost : NativeControlHost
       return new PlatformHandle(window.Handle, "XID");
     }
 
+    // Avalonia adds the view to its own, in the window
+    if (OperatingSystem.IsMacOS() && parent.HandleDescriptor == "NSView")
+    {
+      Viewer = new VtkViewer();
+      _cocoaView = CocoaViewerView.Create(Viewer);
+      Dispatcher.UIThread.Post(() => ViewerCreated?.Invoke(this, EventArgs.Empty));
+      return new PlatformHandle(_cocoaView.Handle, "NSView");
+    }
+
     return base.CreateNativeControlCore(parent);
   }
 
@@ -64,7 +75,7 @@ public sealed class ViewerHost : NativeControlHost
   // the view goes before its window
   protected override void DestroyNativeControlCore(IPlatformHandle control)
   {
-    if (_window is null && _x11Window is null)
+    if (_window is null && _x11Window is null && _cocoaView is null)
     {
       base.DestroyNativeControlCore(control);
       return;
@@ -84,7 +95,13 @@ public sealed class ViewerHost : NativeControlHost
       _x11Window?.Dispose();
     }
 
+    if (OperatingSystem.IsMacOS())
+    {
+      _cocoaView?.Dispose();
+    }
+
     _window = null;
     _x11Window = null;
+    _cocoaView = null;
   }
 }

@@ -30,7 +30,7 @@ VTK writes errors, warnings and text to its output window: on Windows a window o
 
 [!code-csharp[](../samples/Observers.cs#messages)]
 
-Adding a handler installs the routing, `VtkOutput.Install()` does it without one: messages then go to `System.Diagnostics.Trace` while no handler is attached. Install it at startup; `Uninstall()` gives VTK its window back.
+Adding a handler installs the routing, `VtkOutput.Install()` does it without one: messages then go to `System.Diagnostics.Trace` while no handler is attached. Install it at startup; `Uninstall()` gives VTK its window back, as NetVtk does itself when the AppDomain unloads or the process exits.
 
 An object with an `ErrorEvent` handler reports its errors there instead:
 

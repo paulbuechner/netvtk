@@ -2792,6 +2792,13 @@ public:
 class vtkMultiThreshold_NormKey {
 public:
   vtkMultiThreshold_NormKey();
+  int Association;
+  int Type;
+  std::string Name;
+  int Component;
+  int AllScalars;
+  int InputArrayIndex;
+  void* const NormFunction;
 };
 
 class vtkMultiThreshold_Set {
@@ -3604,6 +3611,9 @@ class vtkSplitField_Component {
 public:
   vtkSplitField_Component();
   void SetName(const char* name);
+  int Index;
+  const char* const FieldName;
+  vtkSplitField_Component* const Next;
 };
 
 class vtkStructuredGridClip : public vtkStructuredGridAlgorithm {

@@ -210,6 +210,8 @@
 %netvtk_sized_return(int, int, 3)
 %netvtk_sized_return(int, int, 6)
 %netvtk_sized_return(unsigned int, uint, 3)
+%netvtk_vector(double, double)
+%netvtk_vector(unsigned int, uint)
 
 enum class vtkArrowSource_ArrowOrigins {
   Default = 0,
@@ -891,6 +893,8 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   static vtkHyperTreeGridPreConfiguredSource* New();
+  void GenerateUnbalanced(vtkHyperTreeGrid* HTG, unsigned int dim, unsigned int factor, unsigned int depth, const std::vector< double >& extent, const std::vector< unsigned int >& subdivisions);
+  void GenerateBalanced(vtkHyperTreeGrid* HTG, unsigned int dim, unsigned int factor, unsigned int depth, const std::vector< double >& extent, const std::vector< unsigned int >& subdivisions);
   vtkHyperTreeGridPreConfiguredSource_HTGType GetHTGMode() const;
   void SetHTGMode(vtkHyperTreeGridPreConfiguredSource_HTGType _arg);
   vtkHyperTreeGridPreConfiguredSource_HTGArchitecture GetCustomArchitecture() const;

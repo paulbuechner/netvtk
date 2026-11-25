@@ -536,12 +536,24 @@
 %netvtk_keep_construct(vtkOpenGLState_ScopedglEnableDisable)
 %netvtk_keep_construct(vtkOpenGLState_ScopedglScissor)
 %netvtk_keep_construct(vtkOpenGLState_ScopedglViewport)
+%netvtk_object_vector(vtkCamera)
+%netvtk_object_vector(vtkDataArray)
+%netvtk_object_vector(vtkPolyData)
+%netvtk_object_vector(vtkTextureObject)
 %netvtk_sized_return(double, double, 3)
 %netvtk_sized_return(double, double, 6)
 %netvtk_sized_return(float, float, 3)
 %netvtk_sized_return(float, float, 4)
 %netvtk_sized_return(int, int, 2)
 %netvtk_sized_return(int, int, 6)
+%netvtk_valueclass_vector(vtkOpenGLRenderTimerLog_OGLEvent)
+%netvtk_valueclass_vector(vtkTransformFeedback_VaryingMetaData)
+%netvtk_vector(double, double)
+%netvtk_vector(float, float)
+%netvtk_vector(int, int)
+%netvtk_vector(unsigned char, byte)
+%netvtk_vector(unsigned int, uint)
+%netvtk_vector(vtkIdType, long)
 
 %{
 // Layout guards for the C# structs in src/NetVtk/RenderingOpenGL2/: a mismatch fails the native build.
@@ -794,7 +806,7 @@ public:
   vtkPixelBufferObject* const Download(unsigned int target, unsigned int level);
   bool CreateDepth(unsigned int width, unsigned int height, int internalFormat, vtkPixelBufferObject* pbo);
   bool AllocateDepth(unsigned int width, unsigned int height, int internalFormat);
-  bool AllocateDepthStencil(unsigned int width, unsigned int height);
+  bool AllocateDepthStencil(unsigned int width, unsigned int height, bool floatDepth = false);
   bool Allocate1D(unsigned int width, int numComps, int vtkType);
   bool Allocate2D(unsigned int width, unsigned int height, int numComps, int vtkType, int level = 0);
   bool Allocate3D(unsigned int width, unsigned int height, unsigned int depth, int numComps, int vtkType);
@@ -891,6 +903,13 @@ public:
   bool GetOwnsTexture() const;
   void SetPendingReset(bool pendingReset);
   bool GetPendingReset() const;
+  std::vector< vtkSmartPointer< vtkDataArray > > Arrays;
+  vtkSmartPointer<vtkTextureObject> Texture;
+  vtkSmartPointer<vtkOpenGLBufferObject> Buffer;
+  vtkOpenGLBufferObject_ObjectType BufferType;
+  vtkOpenGLBufferObject_ObjectUsage BufferUsage;
+  bool IntegerTexture;
+  bool ScalarComponents;
 };
 
 class vtkOpenGLTexture : public vtkTexture {
@@ -968,11 +987,16 @@ public:
 class vtkShader_ReplacementSpec {
 public:
   vtkShader_ReplacementSpec();
+  std::string OriginalValue;
+  vtkShader_Type ShaderType;
+  bool ReplaceFirst;
 };
 
 class vtkShader_ReplacementValue {
 public:
   vtkShader_ReplacementValue();
+  std::string Replacement;
+  bool ReplaceAll;
 };
 
 class vtkDrawTexturedElements {
@@ -1043,6 +1067,7 @@ public:
   const char* GetFragmentShaderSource();
   void ResetModsToDefault();
   void AddMod(const std::string& className);
+  void AddMods(const std::vector< std::string >& classNames);
   void RemoveMod(const std::string& className);
   void RemoveAllMods();
 };
@@ -1373,6 +1398,7 @@ public:
   void MapDataArrayToMultiTextureAttribute(const char* tname, const char* dataArrayName, int fieldAssociation, int componentno = -1);
   void RemoveVertexAttributeMapping(const char* vertexAttributeName);
   void RemoveAllVertexAttributeMappings();
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets, vtkProp* prop);
 };
 
 class vtkFastLabeledDataMapper : public vtkOpenGLPolyDataMapper {
@@ -2030,6 +2056,11 @@ public:
 class vtkOpenGLArrayTextureBufferCache_Entry {
 public:
   vtkOpenGLArrayTextureBufferCache_Entry();
+  vtkSmartPointer<vtkDataArray> Array;
+  vtkSmartPointer<vtkTextureObject> Texture;
+  vtkSmartPointer<vtkOpenGLBufferObject> Buffer;
+  vtkMTimeType UploadTime;
+  unsigned long long LastAccess;
 };
 
 class vtkOpenGLBatchedLabeledDataMapper : public vtkMapper2D {
@@ -2086,6 +2117,7 @@ public:
   vtkCompositePolyDataMapperDelegator_BatchElement* GetBatchElement(vtkPolyData* polydata);
   %clear vtkPolyData* polydata;
   void ClearBatchElements();
+  std::vector< vtkPolyData* > GetRenderedList() const;
   %netvtk_keep_argument(SetParent.0, vtkCompositePolyDataMapper* parent)
   void SetParent(vtkCompositePolyDataMapper* parent);
   %clear vtkCompositePolyDataMapper* parent;
@@ -2093,6 +2125,12 @@ public:
   void RenderPiece(vtkRenderer* renderer, vtkActor* actor);
   void UnmarkBatchElements();
   void ClearUnmarkedBatchElements();
+  %netvtk_keep_argument(ProcessSelectorPixelBuffers.0, vtkHardwareSelector* sel)
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets, vtkProp* prop);
+  %clear vtkHardwareSelector* sel;
+  %netvtk_keep_argument(ProcessCompositePixelBuffers.0, vtkHardwareSelector* sel)
+  void ProcessCompositePixelBuffers(vtkHardwareSelector* sel, vtkProp* prop, vtkOpenGLCompositePolyDataMapperDelegator_GLBatchElement* glBatchElement, std::vector< unsigned int >& mypixels);
+  %clear vtkHardwareSelector* sel;
   vtkMTimeType GetMTime();
 };
 
@@ -2384,7 +2422,7 @@ public:
   void RemoveDepthAttachment();
   vtkTextureObject* const GetDepthAttachmentAsTextureObject();
   bool PopulateFramebuffer(int width, int height);
-  bool PopulateFramebuffer(int width, int height, bool useTextures, int numberOfColorAttachments, int colorDataType, bool wantDepthAttachment, int depthBitplanes, int multisamples, bool wantStencilAttachment = false);
+  bool PopulateFramebuffer(int width, int height, bool useTextures, int numberOfColorAttachments, int colorDataType, bool wantDepthAttachment, int depthBitplanes, int multisamples, bool wantStencilAttachment = false, bool floatDepth = false);
   unsigned int GetMaximumNumberOfActiveTargets();
   unsigned int GetMaximumNumberOfRenderTargets();
   NetVtk_Address< int* > GetLastSize();
@@ -2463,6 +2501,12 @@ public:
 class vtkOpenGLInstanceCulling_InstanceLOD {
 public:
   vtkOpenGLInstanceCulling_InstanceLOD();
+  float Distance;
+  unsigned int Query;
+  vtkOpenGLIndexBufferObject* const IBO;
+  vtkOpenGLBufferObject* const PositionVBO;
+  vtkOpenGLBufferObject* const NormalVBO;
+  int NumberOfInstances;
 };
 
 class vtkOpenGLGlyph3DHelper : public vtkOpenGLPolyDataMapper {
@@ -2475,6 +2519,7 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
+  void GlyphRender(vtkRenderer* ren, vtkActor* actor, vtkIdType numPts, std::vector< unsigned char >& colors, std::vector< float >& matrices, std::vector< float >& normalMatrices, std::vector< vtkIdType >& pickIds, vtkMTimeType pointMTime, bool culling);
   void SetLODColoring(bool val);
   %netvtk_keep_argument(ReleaseGraphicsResources.0, vtkWindow* window)
   void ReleaseGraphicsResources(vtkWindow* window);
@@ -2610,12 +2655,20 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
+  size_t CreateTriangleIndexBuffer(vtkCellArray* cells, vtkPoints* points, std::vector< unsigned char >* edgeArray, vtkDataArray* edgeFlags);
+  static void AppendTriangleIndexBuffer(std::vector< unsigned int >& indexArray, vtkCellArray* cells, vtkPoints* points, vtkIdType vertexOffset, std::vector< unsigned char >* edgeArray, vtkDataArray* edgeFlags);
   size_t CreateTriangleLineIndexBuffer(vtkCellArray* cells);
+  static void AppendLineIndexBuffer(std::vector< unsigned int >& indexArray, vtkCellArray* cells, vtkIdType vertexOffset);
   size_t CreateLineIndexBuffer(vtkCellArray* cells);
+  static void AppendTriangleLineIndexBuffer(std::vector< unsigned int >& indexArray, vtkCellArray* cells, vtkIdType vertexOffset);
   size_t CreatePointIndexBuffer(vtkCellArray* cells);
+  static void AppendPointIndexBuffer(std::vector< unsigned int >& indexArray, vtkCellArray* cells, vtkIdType vertexOffset);
   size_t CreateStripIndexBuffer(vtkCellArray* cells, bool wireframeTriStrips);
+  static void AppendStripIndexBuffer(std::vector< unsigned int >& indexArray, vtkCellArray* cells, vtkIdType vertexOffset, bool wireframeTriStrips);
+  static void AppendEdgeFlagIndexBuffer(std::vector< unsigned int >& indexArray, vtkCellArray* cells, vtkIdType vertexOffset, vtkDataArray* edgeflags);
   size_t CreateEdgeFlagIndexBuffer(vtkCellArray* cells, vtkDataArray* edgeflags);
   size_t CreateVertexIndexBuffer(NetVtk_Address< vtkCellArray** > cells);
+  static void AppendVertexIndexBuffer(std::vector< unsigned int >& indexArray, NetVtk_Address< vtkCellArray** > cells, vtkIdType vertexOffset);
 };
 
 class vtkOpenGLLabeledContourMapper : public vtkLabeledContourMapper {
@@ -2786,12 +2839,14 @@ public:
   void UseIndexedRenderingOff();
   void ResetModsToDefault();
   void AddMod(const std::string& className);
+  void AddMods(const std::vector< std::string >& classNames);
   void RemoveMod(const std::string& className);
   void RemoveAllMods();
   void MapDataArrayToVertexAttribute(const char* vertexAttributeName, const char* dataArrayName, int fieldAssociation, int componentno = -1);
   void MapDataArrayToMultiTextureAttribute(const char* tname, const char* dataArrayName, int fieldAssociation, int componentno = -1);
   void RemoveVertexAttributeMapping(const char* vertexAttributeName);
   void RemoveAllVertexAttributeMappings();
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets, vtkProp* prop);
 };
 
 class vtkOpenGLLowMemoryBatchedPolyDataMapper : public vtkOpenGLLowMemoryPolyDataMapper {
@@ -2808,18 +2863,27 @@ public:
   vtkCompositePolyDataMapperDelegator_BatchElement* GetBatchElement(vtkPolyData* polydata);
   %clear vtkPolyData* polydata;
   void ClearBatchElements();
+  std::vector< vtkPolyData* > GetRenderedList() const;
   %netvtk_keep_argument(SetParent.0, vtkCompositePolyDataMapper* parent)
   void SetParent(vtkCompositePolyDataMapper* parent);
   %clear vtkCompositePolyDataMapper* parent;
   void RenderPiece(vtkRenderer* renderer, vtkActor* actor);
   void UnmarkBatchElements();
   void ClearUnmarkedBatchElements();
+  %netvtk_keep_argument(ProcessSelectorPixelBuffers.0, vtkHardwareSelector* sel)
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets, vtkProp* prop);
+  %clear vtkHardwareSelector* sel;
+  %netvtk_keep_argument(ProcessCompositePixelBuffers.0, vtkHardwareSelector* sel)
+  void ProcessCompositePixelBuffers(vtkHardwareSelector* sel, vtkProp* prop, vtkOpenGLLowMemoryBatchedPolyDataMapper_GLBatchElement* glBatchElement, std::vector< unsigned int >& mypixels);
+  %clear vtkHardwareSelector* sel;
   vtkMTimeType GetMTime();
 };
 
 class vtkOpenGLLowMemoryBatchedPolyDataMapper_GLBatchElement {
 public:
   vtkOpenGLLowMemoryBatchedPolyDataMapper_GLBatchElement();
+  vtkCompositePolyDataMapperDelegator_BatchElement Parent;
+  size_t CellGroupId;
 };
 
 class vtkOpenGLPointGaussianMapper : public vtkPointGaussianMapper {
@@ -2838,6 +2902,7 @@ public:
   %clear vtkWindow* arg0;
   bool HasTranslucentPolygonalGeometry();
   void Render(vtkRenderer* ren, vtkActor* act);
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets, vtkProp* prop);
 };
 
 class vtkOpenGLProperty : public vtkProperty {
@@ -2904,11 +2969,16 @@ public:
 class vtkOpenGLRenderTimerLog_OGLEvent {
 public:
   vtkOpenGLRenderTimerLog_OGLEvent();
+  std::string Name;
+  vtkOpenGLRenderTimer* const Timer;
+  std::vector< vtkOpenGLRenderTimerLog_OGLEvent > Events;
 };
 
 class vtkOpenGLRenderTimerLog_OGLFrame {
 public:
   vtkOpenGLRenderTimerLog_OGLFrame();
+  unsigned int ChildCount;
+  std::vector< vtkOpenGLRenderTimerLog_OGLEvent > Events;
 };
 
 class vtkOpenGLRenderUtilities : public vtkObject {
@@ -3355,6 +3425,10 @@ public:
   vtkMTimeType GetUniformListMTime();
   void RemoveUniform(const char* name);
   void RemoveAllUniforms();
+  void SetUniform(const char* name, vtkUniforms_TupleType tt, int nbComponents, const std::vector< int >& value);
+  void SetUniform(const char* name, vtkUniforms_TupleType tt, int nbComponents, const std::vector< float >& value);
+  bool GetUniform(const char* name, std::vector< int >& value);
+  bool GetUniform(const char* name, std::vector< float >& value);
   void SetUniformi(const char* name, int v);
   void SetUniformf(const char* name, float v);
   void SetUniform2i(const char* name, const int* v);
@@ -3384,6 +3458,12 @@ public:
   bool GetUniform4uc(const char* name, unsigned char* v);
   bool GetUniformMatrix(const char* name, vtkMatrix3x3* v);
   bool GetUniformMatrix(const char* name, vtkMatrix4x4* v);
+  bool GetUniform1iv(const char* name, std::vector< int >& f);
+  bool GetUniform1fv(const char* name, std::vector< float >& f);
+  bool GetUniform2fv(const char* name, std::vector< float >& f);
+  bool GetUniform3fv(const char* name, std::vector< float >& f);
+  bool GetUniform4fv(const char* name, std::vector< float >& f);
+  bool GetUniformMatrix4x4v(const char* name, std::vector< float >& f);
   int GetNumberOfUniforms();
   const char* GetNthUniformName(vtkIdType uniformIndex);
   int GetUniformScalarType(const char* name);
@@ -3408,8 +3488,12 @@ public:
   bool GetCoordShiftAndScaleEnabled();
   int GetCoordShiftAndScaleMethod();
   void SetCoordShiftAndScaleMethod(int meth);
+  void SetShift(const std::vector< double >& shift);
   void SetShift(double x, double y, double z);
+  void SetScale(const std::vector< double >& scale);
   void SetScale(double x, double y, double z);
+  const std::vector< double >& GetShift();
+  const std::vector< double >& GetScale();
   void UpdateShiftScale(vtkDataArray* da);
   static void SetGlobalCoordShiftAndScaleEnabled(int val);
   static void GlobalCoordShiftAndScaleEnabledOn();
@@ -3422,6 +3506,7 @@ public:
   unsigned int GetNumberOfComponents();
   void SetStride(unsigned int _arg);
   unsigned int GetStride();
+  std::vector< float >& GetPackedVBO();
   void UploadVBO();
   %netvtk_keep_argument(SetCache.0, vtkOpenGLVertexBufferObjectCache* cache)
   void SetCache(vtkOpenGLVertexBufferObjectCache* cache);
@@ -3776,6 +3861,8 @@ public:
   float GetExponentialConstant();
   bool GetHasShadows();
   bool LightCreatesShadow(vtkLight* l);
+  std::vector< vtkSmartPointer< vtkTextureObject > >* GetShadowMaps();
+  std::vector< vtkSmartPointer< vtkCamera > >* GetLightCameras();
   bool GetNeedUpdate();
   void SetUpToDate();
 };
@@ -3800,6 +3887,8 @@ public:
   %netvtk_keep_argument(SetOpaqueSequence.0, vtkRenderPass* opaqueSequence)
   void SetOpaqueSequence(vtkRenderPass* opaqueSequence);
   %clear vtkRenderPass* opaqueSequence;
+  std::vector< double > ShadowMapTransforms();
+  std::vector< int > GetShadowMapTextureUnits();
   static vtkInformationObjectBaseKey* const ShadowMapPass();
   std::string GetFragmentDeclaration();
   std::string GetFragmentImplementation();
@@ -3914,6 +4003,7 @@ public:
   void PrintSelf(std::ostream& os, vtkIndent indent);
   void ClearVaryings();
   void AddVarying(vtkTransformFeedback_VaryingRole role, const std::string& var);
+  const std::vector< vtkTransformFeedback_VaryingMetaData >& GetVaryings() const;
   static size_t GetBytesPerVertex(vtkTransformFeedback_VaryingRole role);
   size_t GetBytesPerVertex() const;
   void SetNumberOfVertices(size_t _arg);
@@ -3936,6 +4026,8 @@ public:
 class vtkTransformFeedback_VaryingMetaData {
 public:
   vtkTransformFeedback_VaryingMetaData(vtkTransformFeedback_VaryingRole role, const std::string& id);
+  vtkTransformFeedback_VaryingRole Role;
+  std::string Identifier;
 };
 
 class vtkTranslucentPass : public vtkDefaultPass {

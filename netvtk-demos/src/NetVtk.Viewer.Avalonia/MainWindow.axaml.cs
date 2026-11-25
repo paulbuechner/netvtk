@@ -38,10 +38,10 @@ public partial class MainWindow : Window
     _session.DocumentChanged += (_, _) => SyncControls();
     Host.ViewerCreated += Host_ViewerCreated;
     Closed += (_, _) => _session.Dispose();
-    if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
+    if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
     {
-      Status.Text =
-        "This demo hosts the VTK view as a Win32 or X11 window: it runs on Windows and Linux (X11).";
+      Status.Text = "This demo hosts the VTK view as a Win32 or X11 window or an NSView: it runs "
+                    + "on Windows, Linux (X11) and macOS.";
     }
   }
 

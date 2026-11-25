@@ -166,6 +166,8 @@ class vtkTransformPair {
 public:
   vtkTransformPair();
   void SwapForwardInverse();
+  vtkAbstractTransform* const ForwardTransform;
+  vtkAbstractTransform* const InverseTransform;
 };
 
 class vtkTransformConcatenation {

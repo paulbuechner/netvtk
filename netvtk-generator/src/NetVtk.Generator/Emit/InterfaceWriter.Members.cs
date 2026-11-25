@@ -21,10 +21,10 @@ internal sealed partial class InterfaceWriter
 {
   private void WriteClass(StringBuilder body, ClassModel c, ModuleContext module)
   {
-    var baseName = c.Name == RootTransient
+    var baseName = c.Name == RootVtkObject
       ? null
       : c.Ancestors.FirstOrDefault(a => registry.Class(a) is { Kind: not WrapKind.ValueType })
-        ?? (Kind(c) == WrapKind.Transient ? RootTransient : null);
+        ?? (Kind(c) == WrapKind.VtkObject ? RootVtkObject : null);
     if (baseName is not null && registry.Class(baseName) is { } baseClass)
     {
       module.Uses.Add(baseClass.Use);
@@ -40,6 +40,7 @@ internal sealed partial class InterfaceWriter
       .AppendLine("public:");
     Constructors(body, c, module, c.Constructors, IsDirector(c));
     Methods(body, c, module);
+    Fields(body, c, module);
     if (IsDirector(c))
     {
       DirectorMembers(body, c, module);
@@ -67,7 +68,7 @@ internal sealed partial class InterfaceWriter
     var label = $"{c.Name}::{c.Name}";
     // an object the shim creates is deleted by its proxy: without a usable destructor, the
     // finalizer would throw
-    var deletable = c.Traits.HasPublicDestructor || Kind(c) == WrapKind.Transient;
+    var deletable = c.Traits.HasPublicDestructor || Kind(c) == WrapKind.VtkObject;
     if (!c.Traits.IsCreatable && ctors.Count > 0)
     {
       module.Skipped.Add($"{label}: the class declares only placement forms of operator new");
@@ -189,7 +190,7 @@ internal sealed partial class InterfaceWriter
     {
       var label = $"{c.Name}::{m.Name}";
       // the reference count belongs to the proxies (VtkObjects.i): covered, not logged
-      if (Kind(c) == WrapKind.Transient && RefCountMembers.Contains(m.Name))
+      if (Kind(c) == WrapKind.VtkObject && RefCountMembers.Contains(m.Name))
       {
         continue;
       }
@@ -223,8 +224,8 @@ internal sealed partial class InterfaceWriter
 
       if (Returned(returned, label, m.Return, m.Parameters,
                    twins.Select(o => (o.Return, o.Parameters)), module.Skipped) is { } returnType
-          && Map(c.Name, m.Name, declared, module, keepsStreams ? KeptStream("the class") : null) is
-            { } member)
+          && Map(c.Name, m.Name, declared, module, keepsStreams ? KeptStream("the class") : null,
+                 SizeHints.Of(m, HintsOf(c, m))) is { } member)
       {
         methods.Add((m, returnType, member, accessor));
       }
@@ -278,6 +279,18 @@ internal sealed partial class InterfaceWriter
         body.AppendLine($"  %apply {apply} {{ {returned.Spelling.Replace("*", " *")}{m.Name} }};");
       }
 
+      // the typemaps of a parameter a VTK size hint names, by its name, for this declaration only
+      List<(SizedReference Sized, string Name)> sized =
+      [
+        .. member.Parameters.Select((p, i) => (p.Type.Sized, Name: text.Arguments[i]))
+          .Where(p => p.Sized is not null)
+          .Select(p => (p.Sized!, p.Name))
+      ];
+      foreach (var (size, name) in sized)
+      {
+        body.AppendLine($"  {size.Macro(name)}");
+      }
+
       if (accessor is null)
       {
         // a director's virtual member: VTK calls a C# override (Directors.i)
@@ -311,6 +324,63 @@ internal sealed partial class InterfaceWriter
       {
         body.AppendLine($"  %clear {returned.Spelling.Replace("*", " *")}{m.Name};");
       }
+
+      foreach (var (size, name) in sized)
+      {
+        body.AppendLine($"  %clear {size.Clear(name)};");
+      }
+    }
+  }
+
+  // the member whose size hints naming parameters a member follows: itself, or for an override
+  // without any, the nearest one it overrides that has some (VTK hints the base's declaration)
+  private MethodModel HintsOf(ClassModel c, MethodModel m)
+  {
+    if (!m.IsVirtual || SizeHints.Names(m))
+    {
+      return m;
+    }
+
+    List<string> types = [.. m.Parameters.Select(p => p.Type.Spelling)];
+    return c.Ancestors.SelectMany(a => classOf?.Invoke(a)?.Methods ?? [])
+             .FirstOrDefault(b => b.Name == m.Name
+                                  && b.IsVirtual
+                                  && SizeHints.Names(b)
+                                  && b.Parameters.Select(p => p.Type.Spelling).SequenceEqual(types))
+           ?? m;
+  }
+
+  /// <summary>
+  /// A value class's public data members as C# properties (SWIG's member variables), as
+  /// <see cref="SignatureMapper.Field"/> maps them: numbers, enums and strings read and written,
+  /// VTK objects read with a reference of their own, vectors of value classes read as arrays of
+  /// copies. A value class's proxy owns its copy, which they are the data of; other classes' fields
+  /// stay out (a VTK object's state has accessors).
+  /// </summary>
+  private void Fields(StringBuilder body, ClassModel c, ModuleContext module)
+  {
+    if (Kind(c) != WrapKind.ValueClass)
+    {
+      return;
+    }
+
+    // a C# member can't have its class's name or another member's
+    HashSet<string> taken = [c.Name, .. ProxyMembers, .. c.Methods.Select(m => m.Name)];
+    foreach (var field in (c.Fields ?? []).Where(f => f.IsPublic && f.Name.Length > 0))
+    {
+      var label = $"{c.Name}::{field.Name}";
+      var mapped = mapper.Field(field.Type);
+      var reason = module.Config.ExcludeMethods.Contains(label) ? "excluded in the config" :
+        taken.Contains(field.Name) ? "name clashes with the C# proxy" :
+        IsCSharpKeyword(field.Name) ? "its name is a C# keyword" : mapped.Skip;
+      if (reason is not null || mapped.Type is not { } type)
+      {
+        module.Skipped.Add($"{label}: {reason}");
+        continue;
+      }
+
+      module.Use(type);
+      body.AppendLine($"  {type.Declare(field.Name)};");
     }
   }
 
@@ -527,13 +597,14 @@ internal sealed partial class InterfaceWriter
     $"{keeper} may keep the stream, which C# lends for the call only";
 
   // a member's mapped parameters, or null (skipped, reason logged). keptStream: why a stream
-  // parameter can't be lent here.
+  // parameter can't be lent here; sized: the parameters size hints name (MapParameters).
   private MappedMember? Map(string owner, string name, IReadOnlyList<ParameterModel> parameters,
-                            ModuleContext module, string? keptStream = null)
+                            ModuleContext module, string? keptStream = null,
+                            IReadOnlyDictionary<int, string?>? sized = null)
   {
     var label = $"{owner}::{name}";
     return MapParameters(mapper, label, parameters, MayKeep(owner, name), module.Skipped,
-                         keptStream) is { } mapped
+                         keptStream, sized) is { } mapped
       ? new MappedMember(label, name, mapped)
       : null;
   }

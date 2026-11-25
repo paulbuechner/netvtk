@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 """The class index: every type NetVtk gives C#, per VTK module, linked to VTK's Doxygen reference.
 
-Reads netvtk-core's src/SWIG_files/modules.json and classes.json (netvtk-gen writes both) and writes classes/*.md with
-their toc.yml. Names and links only: no VTK doc text.
+Reads netvtk-core's src/SWIG_files/modules.json, platforms.json and classes.json (netvtk-gen writes them) and writes
+classes/*.md with their toc.yml. Names and links only: no VTK doc text.
 
     python classes.py            # before docfx
     python classes.py --check    # also fetch every link: fails on one the reference doesn't have (then see NO_PAGE)
@@ -23,6 +23,9 @@ SWIG_FILES = ROOT.parent / "netvtk-core" / "src" / "SWIG_files"
 OUT = ROOT / "classes"
 # nightly, which is 9.7: vtk.org/doc/release/<version>/html has 7.1, but no 8.2 or 9.x
 REFERENCE = "https://vtk.org/doc/nightly/html/"
+
+# the operating systems of platforms.json, as .NET's RIDs name them
+OPERATING_SYSTEMS = {"win": "Windows", "linux": "Linux", "osx": "macOS"}
 
 # how VTK's Doxygen spells names in file names (case-sensitive: capitals stay): "_" doubled, "::" as _1_1, "." as _8
 ESCAPES = {"_": "__", ":": "_1", ".": "_8"}
@@ -92,11 +95,14 @@ def note(entry: dict) -> str:
     return f" ({entry['kind']})" if entry["kind"] in ("enum", "struct", "namespace") else ""
 
 
-def page(module: str, library: str, entries: list[dict], kinds: dict[str, str]) -> str:
+def page(module: str, library: str, entries: list[dict], kinds: dict[str, str], platform: str | None = None) -> str:
+    """A module's page; platform: the OS whose classes its library holds, if one's."""
+    where = (f"The types of {module} in C#, classes VTK installs on {platform} only (native library `NetVtk{library}`, "
+             f"in the {platform} runtime packages only)" if platform else
+             f"The types of VTK's {module} module in C# (native library `NetVtk{library}`)")
     lines = [f"# {module}", "",
-             f"The types of VTK's {module} module in C# (native library `NetVtk{library}`), each linked to its page in "
-             "VTK's reference. C# names are VTK's; a nested type's scopes are joined by `_`, a template instance is "
-             "named by its arguments.", ""]
+             f"{where}, each linked to its page in VTK's reference. C# names are VTK's; a nested type's scopes are joined "
+             "by `_`, a template instance is named by its arguments.", ""]
     for entry in entries:
         url = link(entry, kinds)
         name = f"[{entry['name']}]({url})" if url else entry["name"]
@@ -135,6 +141,7 @@ def main() -> None:
     args = parser.parse_args()
 
     libraries: dict[str, list[str]] = json.loads((SWIG_FILES / "modules.json").read_text(encoding="utf-8"))
+    platforms: dict[str, str] = json.loads((SWIG_FILES / "platforms.json").read_text(encoding="utf-8"))
     types: dict[str, list[dict]] = json.loads((SWIG_FILES / "classes.json").read_text(encoding="utf-8"))
     # each C++ scope's kind (class, struct, namespace): a nested enum's page is its scope's
     kinds = {without_arguments(entry["cpp"]): entry["kind"] for entries in types.values() for entry in entries
@@ -145,10 +152,12 @@ def main() -> None:
     toc = ["- name: Overview", "  href: index.md"]
     overview = []
     for library, modules in libraries.items():
-        overview += [f"## NetVtk{library}", ""]
+        platform = OPERATING_SYSTEMS[platforms[library]] if library in platforms else None
+        overview += [f"## NetVtk{library}" + (f" ({platform} only)" if platform else ""), ""]
         for module in modules:
             entries = types.get(module, [])
-            (OUT / f"{module}.md").write_text(page(module, library, entries, kinds), encoding="utf-8", newline="\n")
+            (OUT / f"{module}.md").write_text(page(module, library, entries, kinds, platform), encoding="utf-8",
+                                              newline="\n")
             toc += [f"- name: {module}", f"  href: {module}.md"]
             overview.append(f"- [{module}]({module}.md): {len(entries)} types")
         overview.append("")

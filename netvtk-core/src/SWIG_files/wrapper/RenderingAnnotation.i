@@ -122,6 +122,8 @@
 %feature("valuewrapper") vtkXYPlotActor;
 %netvtk_address(%arg(double*))
 %netvtk_address(%arg(vtkImageMapToWindowLevelColors*))
+%netvtk_object_vector(vtkActor2D)
+%netvtk_object_vector(vtkTextMapper)
 %netvtk_sized_return(double, double, 2)
 %netvtk_sized_return(double, double, 3)
 %netvtk_sized_return(double, double, 6)
@@ -785,6 +787,8 @@ public:
   double GetLabelFactorMinValue();
   double GetLabelFactorMaxValue();
   double GetLabelFactor();
+  std::vector< vtkSmartPointer< vtkTextMapper > > GetLabelMappers();
+  std::vector< vtkSmartPointer< vtkActor2D > > GetLabelActors();
   int UpdateGeometryAndRenderOpaqueGeometry(vtkViewport* viewport, bool render);
   int RenderOverlay(vtkViewport* viewport);
   int RenderOpaqueGeometry(vtkViewport* viewport);
@@ -1029,6 +1033,8 @@ public:
   const char* GetText(int i);
   void ClearAllTexts();
   void CopyAllTextsFrom(vtkCornerAnnotation* ca);
+  std::vector< std::string > GetAllTexts() const;
+  void SetAllTexts(const std::vector< std::string >& values);
   %netvtk_keep_argument(SetImageActor.0, vtkImageActor* arg0)
   void SetImageActor(vtkImageActor* arg0);
   %clear vtkImageActor* arg0;

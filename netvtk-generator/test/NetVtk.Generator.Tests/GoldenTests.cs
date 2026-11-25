@@ -40,10 +40,14 @@ public class GoldenTests
     yield return Output("core/src/SWIG_files/headers/Demo_module.hxx", "Demo_module.hxx");
     yield return Output("core/src/SWIG_files/headers/Demo_nested.hxx", "Demo_nested.hxx");
     yield return Output("core/src/NetVtk/Demo/vtkDemoInfo.g.cs", "vtkDemoInfo.g.cs");
+    yield return Output("core/src/SWIG_files/wrapper/DemoWin32.i", "DemoWin32.i");
+    yield return Output("core/src/SWIG_files/headers/DemoWin32_module.hxx", "DemoWin32_module.hxx");
     yield return Output("core/src/SWIG_files/modules.json", "modules.json");
+    yield return Output("core/src/SWIG_files/platforms.json", "platforms.json");
     yield return Output("core/src/SWIG_files/classes.json", "classes.json");
     yield return Output("log/skips/Core.txt", "Core.skips.txt");
     yield return Output("log/skips/Demo.txt", "Demo.skips.txt");
+    yield return Output("log/skips/DemoWin32.txt", "DemoWin32.skips.txt");
   }
 
   [OneTimeSetUp]

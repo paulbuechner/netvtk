@@ -52,7 +52,7 @@ internal sealed partial class InterfaceWriter(TypeRegistry registry, SignatureMa
   private static readonly HashSet<string> ProxyMembers = ["Dispose", "Finalize", "MemberwiseClone"];
 
   // the root of VTK's objects
-  private const string RootTransient = "vtkObjectBase";
+  private const string RootVtkObject = "vtkObjectBase";
 
   // the attribute as a SWIG string, for %csattributes and the csattributes typemap
   internal static readonly string SwigObsolete = $"\"{CsObsolete.Replace("\"", "\\\"")}\"";
@@ -109,8 +109,8 @@ internal sealed partial class InterfaceWriter(TypeRegistry registry, SignatureMa
 
     var direct = uses.Select(u => u.Package).ToHashSet();
     // VTK objects: their root's module (SafeDownCast takes a vtkObjectBase*)
-    if (classes.Any(c => Kind(c) == WrapKind.Transient)
-        && registry.Class(RootTransient) is { Package: var rootModule }
+    if (classes.Any(c => Kind(c) == WrapKind.VtkObject)
+        && registry.Class(RootVtkObject) is { Package: var rootModule }
         && rootModule != own)
     {
       direct.Add(rootModule);
@@ -207,7 +207,7 @@ internal sealed partial class InterfaceWriter(TypeRegistry registry, SignatureMa
     foreach (var c in classes)
     {
       var kind = Kind(c);
-      if (kind == WrapKind.Transient)
+      if (kind == WrapKind.VtkObject)
       {
         macros.AppendLine($"%vtk_object({c.Name})");
         // a C# constructor for a class VTK's New() creates (VtkObjects.i), unless it has public
@@ -251,7 +251,7 @@ internal sealed partial class InterfaceWriter(TypeRegistry registry, SignatureMa
 
       // a VTK object's destructor is protected: its proxy drops a reference instead
       // (VtkObjects.i's unref), which needs SWIG's destructor wrapper
-      if (!c.Traits.HasPublicDestructor && kind != WrapKind.Transient)
+      if (!c.Traits.HasPublicDestructor && kind != WrapKind.VtkObject)
       {
         macros.AppendLine($"%nodefaultdtor {c.Name};");
       }

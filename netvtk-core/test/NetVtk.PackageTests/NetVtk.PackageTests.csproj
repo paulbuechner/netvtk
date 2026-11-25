@@ -17,7 +17,13 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>NetVtk.PackageTests</RootNamespace>
+    <!-- with NetVtkModules (build.py test-package's second run), a test checks the selection -->
+    <DefineConstants Condition="'$(NetVtkModules)' != ''">$(DefineConstants);NETVTK_MODULES</DefineConstants>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(NetVtkModules)' != ''">
+    <AssemblyMetadata Include="NetVtkModules" Value="$(NetVtkModules)" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NetVtk" Version="$(NetVtkPackageVersion)" />

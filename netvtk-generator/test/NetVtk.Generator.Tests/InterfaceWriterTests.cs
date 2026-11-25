@@ -50,9 +50,9 @@ public class InterfaceWriterTests
   public void Write_DeclaresObjectTypemapsBeforeAnyClass()
   {
     // Arrange (Demo_Owner returns a smart pointer to Demo_Part, which comes later in the package)
-    var owner = new ClassModel("Demo_Owner", "Demo_Owner.h", ["vtkObjectBase"], TransientTraits, [],
+    var owner = new ClassModel("Demo_Owner", "Demo_Owner.h", ["vtkObjectBase"], VtkObjectTraits, [],
                                [Method("Part", SmartPointer("Demo_Part"))]);
-    var part = new ClassModel("Demo_Part", "Demo_Part.h", ["vtkObjectBase"], TransientTraits, [],
+    var part = new ClassModel("Demo_Part", "Demo_Part.h", ["vtkObjectBase"], VtkObjectTraits, [],
                               []);
 
     // Act
@@ -75,7 +75,7 @@ public class InterfaceWriterTests
     // be a VTK object)
     var tool = new ClassModel("Demo_Tool", "Demo_Tool.h",
                               ["vtkPolyDataAlgorithm", "vtkAlgorithm", "vtkObjectBase"],
-                              TransientTraits, [], []);
+                              VtkObjectTraits, [], []);
 
     // Act
     var module = Write(Package(classes: [tool]));
@@ -742,7 +742,7 @@ public class InterfaceWriterTests
     // Arrange (Start() beside static Start(smart pointer): SWIG tells a smart pointer from the
     // object)
     var progress = new ClassModel("Demo_Progress", "Demo_Progress.h", ["vtkObjectBase"],
-                                  TransientTraits, [], [
+                                  VtkObjectTraits, [], [
                                     Method("Start", Builtin("int")),
                                     Method("Start", Builtin("int"),
                                            new ParameterModel(
@@ -972,7 +972,7 @@ public class InterfaceWriterTests
     // .i doesn't show it, against Demo_Shape)
     var (presentation, selectable, director) = DirectorHierarchy();
     var shape = new ClassModel("Demo_Shape", "Demo_Shape.h",
-                               ["Demo_Object", "Demo_Selectable", "vtkObjectBase"], TransientTraits,
+                               ["Demo_Object", "Demo_Selectable", "vtkObjectBase"], VtkObjectTraits,
                                [new ConstructorModel([], false)], []);
 
     // Act
@@ -994,7 +994,7 @@ public class InterfaceWriterTests
     // Arrange (as vtkOutputWindow: New() and a protected constructor, which C# subclasses call; a
     // constructor calling New() would be a second default one)
     var window = new ClassModel("vtkDemoWindow", "vtkDemoWindow.h", ["vtkObjectBase"],
-                                TransientTraits, [], [
+                                VtkObjectTraits, [], [
                                   Method("New", Pointer(Class("vtkDemoWindow"))) with
                                   {
                                     IsStatic = true
@@ -1026,7 +1026,7 @@ public class InterfaceWriterTests
   {
     // Arrange (a stream parameter doesn't reach a C# override)
     var director = new ClassModel("Demo_Writer", "Demo_Writer.h", ["vtkObjectBase"],
-                                  TransientTraits with { IsAbstract = true },
+                                  VtkObjectTraits with { IsAbstract = true },
                                   [new ConstructorModel([], false)], [
                                     Method("Write", Builtin("void"),
                                            new ParameterModel("theStream", OStream, null)) with
@@ -1044,17 +1044,231 @@ public class InterfaceWriterTests
       Throws.InvalidOperationException.With.Message.Contains("Demo_Writer can't be a director"));
   }
 
+  [Test]
+  public void Write_DeclaresAValueClassPublicData()
+  {
+    // Arrange (numbers, a width typedef by its name, an enum, a const number, a VTK object)
+    var hit = ValueClass("Demo_Hit") with
+    {
+      Fields =
+      [
+        new FieldModel("Valid", Builtin("bool"), 0, IsPublic: true),
+        new FieldModel("Cell", new BuiltinType("long long", Written: "vtkIdType"), 8,
+                       IsPublic: true),
+        new FieldModel("Device", Enum("vtkEventDataDevice"), 16, IsPublic: true),
+        new FieldModel("Count", Const(Builtin("int")), 20, IsPublic: true),
+        new FieldModel("Transform", Pointer(Class("vtkTransform")), 24, IsPublic: true),
+      ],
+    };
+
+    // Act
+    var module = Write(Package(classes: [hit]));
+
+    // Assert (a VTK object read only, T* const: its getter gives the proxy a reference)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(module.Interface,
+                  Does.Contain(
+                    "  bool Valid;\n  vtkIdType Cell;\n  vtkEventDataDevice Device;\n  const int Count;\n  vtkTransform* const Transform;\n"));
+      Assert.That(module.Imports, Does.Contain("CommonTransforms"));
+      Assert.That(module.Skipped, Is.Empty);
+    }
+  }
+
+  [Test]
+  public void Write_DeclaresAValueClassStringsAndVectors()
+  {
+    // Arrange (a string, a const one, and the events nested in an event: a vector of its own class)
+    var characters = Template("std::basic_string", Builtin("char"),
+                              Template("std::char_traits", Builtin("char")),
+                              Template("std::allocator", Builtin("char")));
+    var events = Template("std::vector", Class("Demo_Event"),
+                          Template("std::allocator", "Demo_Event"));
+    var timed = ValueClass("Demo_Event") with
+    {
+      Fields =
+      [
+        new FieldModel("Name", characters, 0, IsPublic: true),
+        new FieldModel("Unit", Const(characters), 32, IsPublic: true),
+        new FieldModel("Events", events, 64, IsPublic: true),
+      ],
+    };
+
+    // Act
+    var module = Write(Package(classes: [timed]));
+
+    // Assert (the vector read and written, through its macro, which comes before the class)
+    var text = module.Interface;
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(
+        text,
+        Does.Contain(
+          "  std::string Name;\n  const std::string Unit;\n  std::vector< Demo_Event > Events;\n"));
+      Assert.That(text.IndexOf("%netvtk_valueclass_vector(Demo_Event)\n", StringComparison.Ordinal),
+                  Is.InRange(0, text.IndexOf("class Demo_Event {", StringComparison.Ordinal)));
+      Assert.That(module.Skipped, Is.Empty);
+    }
+  }
+
+  [Test]
+  public void Write_DeclaresAValueClassArraysStructsAndPointers()
+  {
+    // Arrange (a C array, a struct, a C string, an address, a pointer to a value class)
+    var hit = ValueClass("Demo_Hit") with
+    {
+      Fields =
+      [
+        new FieldModel("Point", new ArrayType(Builtin("double"), 3), 0, IsPublic: true),
+        new FieldModel("Normal", Class("vtkVector3d"), 24, IsPublic: true),
+        new FieldModel("Label", Pointer(Builtin("char")), 48, IsPublic: true),
+        new FieldModel("Data", Pointer(Builtin("void")), 56, IsPublic: true),
+        new FieldModel("Next", Pointer(Class("Demo_Hit")), 64, IsPublic: true),
+      ],
+    };
+
+    // Act
+    var module = Write(Package(classes: [hit]));
+
+    // Assert (the string and the pointer to a value class read only)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(module.Interface,
+                  Does.Contain(
+                    "  double Point[3];\n  vtkVector3d Normal;\n  const char* const Label;\n  void* Data;\n  Demo_Hit* const Next;\n"));
+      Assert.That(module.Skipped, Is.Empty);
+    }
+  }
+
+  [Test]
+  public void Write_LeavesOutDataCSharpCantDeclare()
+  {
+    // Arrange (an array of arrays, a private field, a name a method has)
+    var hit = ValueClass("Demo_Hit", Method("Area", Builtin("double"))) with
+    {
+      Fields =
+      [
+        new FieldModel("Matrix", new ArrayType(new ArrayType(Builtin("double"), 3), 3), 0,
+                       IsPublic: true),
+        new FieldModel("Hidden", Builtin("int"), 72),
+        new FieldModel("Area", Builtin("double"), 80, IsPublic: true),
+      ],
+    };
+
+    // Act
+    var module = Write(Package(classes: [hit]));
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(module.Interface, Does.Not.Contain(" Matrix").And.Not.Contain(" Hidden;"));
+      Assert.That(module.Skipped, Is.EqualTo(new[]
+      {
+        "Demo_Hit::Matrix: a field of double[3][3]: C# properties are numbers, enums, strings, structs, value classes, VTK objects, addresses, arrays of numbers or structs and vectors",
+        "Demo_Hit::Area: name clashes with the C# proxy",
+      }));
+    }
+  }
+
+  [Test]
+  public void Write_DeclaresAPointerASizeHintNamesWithItsTypemaps()
+  {
+    // Arrange (GetCellPoints(cellId, npts, pts): pts holds npts elements after the call)
+    var idType = new BuiltinType("long long", Written: "vtkIdType");
+    var cells = VtkObject("Demo_Cells", Method("GetCellPoints", Builtin("void"),
+                                               new ParameterModel("cellId", idType, null),
+                                               new ParameterModel("npts", Ref(idType), null),
+                                               new ParameterModel(
+                                                 "pts", Ref(Pointer(Const(idType))), null)) with
+    {
+      Hints = ["vtk::sizehint(pts, npts)"]
+    });
+
+    // Act
+    var module = Write(Package(classes: [cells]));
+
+    // Assert (VtkObjects.i's typemaps by the parameter's name, for this declaration only)
+    Assert.That(module.Interface,
+                Does.Contain(
+                  "  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))\n  void GetCellPoints(vtkIdType cellId, vtkIdType& npts, const vtkIdType*& pts);\n  %clear const vtkIdType *&pts;\n"));
+  }
+
+  [Test]
+  public void Write_TakesTheSizeHintsOfTheMemberAnOverrideOverrides()
+  {
+    // Arrange (VTK hints the base's declaration only: pts holds as many as the result says)
+    var idType = new BuiltinType("long long", Written: "vtkIdType");
+    var faces = Method("GetFacePoints", idType, new ParameterModel("faceId", idType, null),
+                       new ParameterModel("pts", Ref(Pointer(Const(idType))), null)) with
+    {
+      IsVirtual = true
+    };
+    var cell = VtkObject("Demo_Cell", faces with { Hints = ["vtk::sizehint(pts, _)"] });
+    var hexahedron = VtkObject("Demo_Hexahedron", faces) with
+    {
+      Ancestors = ["Demo_Cell", "vtkObjectBase"]
+    };
+
+    // Act
+    var module = Write(Package(classes: [cell, hexahedron]));
+
+    // Assert
+    var text = module.Interface;
+    Assert.That(text[text.IndexOf("class Demo_Hexahedron", StringComparison.Ordinal)..],
+                Does.Contain("  %netvtk_sized_ref(const vtkIdType, pts, long, result)\n"));
+  }
+
+  [Test]
+  public void Write_PassesAnArrayASizeHintNamesToASetter()
+  {
+    // Arrange (a setter may keep a pointer, unless VTK sizes it: its wrappers pass a temporary)
+    var graph = VtkObject("Demo_Graph",
+                          Method("SetEdgePoints", Builtin("void"),
+                                 new ParameterModel("npts", Builtin("int"), null),
+                                 new ParameterModel("pts", Pointer(Const(Builtin("double"))), null))
+                            with
+                            {
+                              Hints = ["vtk::sizehint(pts, 3 * npts)"]
+                            });
+
+    // Act
+    var module = Write(Package(classes: [graph]));
+
+    // Assert
+    Assert.That(module.Interface,
+                Does.Contain("  void SetEdgePoints(int npts, const double* pts);\n"));
+  }
+
+  [Test]
+  public void Write_KeepsAVtkObjectsDataOut()
+  {
+    // Arrange (its state has accessors; the proxy is the object, no copy)
+    var tool = new ClassModel("Demo_Tool", "Demo_Tool.h", ["vtkObjectBase"], VtkObjectTraits, [],
+                              [],
+                              Fields: [new FieldModel("Count", Builtin("int"), 8, IsPublic: true)]);
+
+    // Act
+    var module = Write(Package(classes: [tool]));
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(module.Interface, Does.Not.Contain("Count;"));
+      Assert.That(module.Skipped, Is.Empty);
+    }
+  }
+
   // Demo_Object (a director) : Demo_Selectable : vtkObjectBase, and the Demo_Presentation its
   // Compute takes
   private static (ClassModel Presentation, ClassModel Selectable, ClassModel Director)
     DirectorHierarchy()
   {
-    var abstractTransient = TransientTraits with { IsAbstract = true };
+    var abstractVtkObject = VtkObjectTraits with { IsAbstract = true };
     var mode = new ParameterModel("theMode", Builtin("int"), null);
     var presentation = new ClassModel("Demo_Presentation", "Demo_Presentation.h", ["vtkObjectBase"],
-                                      TransientTraits, [], []);
+                                      VtkObjectTraits, [], []);
     var selectable = new ClassModel("Demo_Selectable", "Demo_Selectable.h", ["vtkObjectBase"],
-                                    abstractTransient, [], [
+                                    abstractVtkObject, [], [
                                       Method("ComputeSelection", Builtin("void"), mode) with
                                       {
                                         IsVirtual = true, IsPure = true
@@ -1062,7 +1276,7 @@ public class InterfaceWriterTests
                                       Method("Clear", Builtin("void")) with { IsVirtual = true },
                                     ]);
     var director = new ClassModel("Demo_Object", "Demo_Object.h",
-                                  ["Demo_Selectable", "vtkObjectBase"], abstractTransient, [], [
+                                  ["Demo_Selectable", "vtkObjectBase"], abstractVtkObject, [], [
                                     Method("Accepts", Builtin("bool"), mode) with
                                     {
                                       IsVirtual = true, IsConst = true
@@ -1112,6 +1326,9 @@ public class InterfaceWriterTests
 
   private static ClassModel ValueClass(string name, params MethodModel[] methods) =>
     new(name, $"{name}.h", [], ValueTraits, [], methods);
+
+  private static ClassModel VtkObject(string name, params MethodModel[] methods) =>
+    new(name, $"{name}.h", ["vtkObjectBase"], VtkObjectTraits, [], methods);
 
   private static MethodModel Method(string name, CppType returns,
                                     params ParameterModel[] parameters) =>

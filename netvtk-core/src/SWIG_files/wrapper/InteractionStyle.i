@@ -149,6 +149,7 @@
 %netvtk_address(%arg(const double*))
 %netvtk_sized_return(double, double, 3)
 %netvtk_sized_return(int, int, 2)
+%netvtk_valueclass_vector(vtkVector2i)
 
 enum class vtkCameraManipulator_MouseButtonType {
   Left = 1,
@@ -161,6 +162,8 @@ enum class vtkTrackballMoveActor_MoveActorEvents {
   RequestActiveSourcePositionEvent = 1003,
   ApplyActiveSourcePositionEvent = 1002,
 };
+
+%include "extras/InteractionStyle.i"
 
 class vtkCameraManipulator : public vtkObject {
 public:
@@ -220,6 +223,7 @@ public:
   bool GetDrawPolygonPixels();
   void DrawPolygonPixelsOn();
   void DrawPolygonPixelsOff();
+  std::vector< vtkVector2i > GetPolygonPoints();
 };
 
 class vtkInteractorStyleFlight : public vtkInteractorStyle {

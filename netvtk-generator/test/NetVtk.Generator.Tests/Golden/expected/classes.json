@@ -29,6 +29,11 @@
       "cpp": "vtkDemoArray"
     },
     {
+      "name": "vtkDemoHit",
+      "kind": "struct",
+      "cpp": "vtkDemoHit"
+    },
+    {
       "name": "vtkDemoIdArray",
       "kind": "class",
       "cpp": "vtkDemoIdArray"
@@ -66,6 +71,13 @@
       "kind": "class",
       "cpp": "vtkDemoTemplate",
       "instance": true
+    }
+  ],
+  "DemoWin32": [
+    {
+      "name": "vtkWin32DemoRenderWindow",
+      "kind": "class",
+      "cpp": "vtkWin32DemoRenderWindow"
     }
   ]
 }

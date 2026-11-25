@@ -53,6 +53,7 @@
 %netvtk_address(%arg(FT_LibraryRec_**))
 %netvtk_address(%arg(size_t*))
 %netvtk_std_array(%arg(int), 2, int)
+%netvtk_std_array(%arg(int), 4, int)
 
 class vtkFreeTypeStringToImage : public vtkStringToImage {
 public:
@@ -129,11 +130,22 @@ public:
 class vtkFreeTypeTools_FaceMetrics {
 public:
   vtkFreeTypeTools_FaceMetrics();
+  int UnitsPerEM;
+  int Ascender;
+  int Descender;
+  int HorizAdvance;
+  std::array< int, 4 > BoundingBox;
+  std::string FamilyName;
+  bool Scalable;
+  bool Bold;
+  bool Italic;
 };
 
 class vtkFreeTypeTools_GlyphOutline {
 public:
   vtkFreeTypeTools_GlyphOutline();
+  int HorizAdvance;
+  vtkSmartPointer<vtkPath> Path;
 };
 
 class vtkMathTextFreeTypeTextRenderer : public vtkTextRenderer {

@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Paul=20B=C3=BCchner?= <45827409+paulbuechner@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 19:39:38 +0100
+Subject: [PATCH] vtkOpenGLRenderer: Ask OpenGL for its vendor with a current
+ context only
+
+On Apple, vtkOpenGLRenderTimer::IsSupported asked
+vtkOpenGLRenderer::HaveAppleQueryAllocationBug, which read OpenGL's
+vendor with glGetString, and kept the answer in a static. A render
+timer's FrameReady before its window's first render made that call
+without a context: glad hadn't loaded glGetString yet, and Apple's
+OpenGL crashes on any call without a current context, so the process
+crashed.
+
+HaveAppleQueryAllocationBug now asks only when glad has loaded
+glGetString and CGL has a current context (CGLGetCurrentContext, looked
+up in the OpenGL framework glad loads). Without one it reports no bug
+and asks again on the next call; it keeps the answer once it has one.
+IsSupported no longer keeps its first answer.
+---
+ Rendering/OpenGL2/vtkOpenGLRenderTimer.cxx |  5 +++--
+ Rendering/OpenGL2/vtkOpenGLRenderer.cxx    | 14 ++++++++++++++
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/Rendering/OpenGL2/vtkOpenGLRenderTimer.cxx b/Rendering/OpenGL2/vtkOpenGLRenderTimer.cxx
+index ad0ddf1..335d25c 100644
+--- a/Rendering/OpenGL2/vtkOpenGLRenderTimer.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLRenderTimer.cxx
+@@ -42,8 +42,9 @@ bool vtkOpenGLRenderTimer::IsSupported()
+ #ifdef NO_TIMESTAMP_QUERIES
+   return false;
+ #else
+-  static const bool s = !vtkOpenGLRenderer::HaveAppleQueryAllocationBug();
+-  return s;
++  // not kept here: HaveAppleQueryAllocationBug keeps its answer once a
++  // context could give it
++  return !vtkOpenGLRenderer::HaveAppleQueryAllocationBug();
+ #endif
+ }
+ 
+diff --git a/Rendering/OpenGL2/vtkOpenGLRenderer.cxx b/Rendering/OpenGL2/vtkOpenGLRenderer.cxx
+index 08a0e75..8b88efa 100644
+--- a/Rendering/OpenGL2/vtkOpenGLRenderer.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLRenderer.cxx
+@@ -70,6 +70,7 @@
+ 
+ #if defined(__APPLE__)
+ #include <CoreFoundation/CoreFoundation.h>
++#include <dlfcn.h>
+ #endif
+ 
+ VTK_ABI_NAMESPACE_BEGIN
+@@ -961,6 +962,19 @@ bool vtkOpenGLRenderer::HaveAppleQueryAllocationBug()
+ 
+   if (hasBug == QueryAllocStatus::NotChecked)
+   {
++    // Only a current context can name the vendor: before a window's first
++    // render glad hasn't loaded glGetString, and Apple's OpenGL crashes on a
++    // call without a current context. Until then, report no bug and ask
++    // again on the next call. CGL comes with the OpenGL framework, which glad
++    // loads.
++    using CurrentContext = void* (*)();
++    auto currentContext =
++      reinterpret_cast<CurrentContext>(dlsym(RTLD_DEFAULT, "CGLGetCurrentContext"));
++    if (!glGetString || !currentContext || !currentContext())
++    {
++      return false;
++    }
++
+     // We can restrict this to a specific version, etc, as we get more
+     // information about the bug, but for now just disable query allocations on
+     // all apple NVIDIA cards.

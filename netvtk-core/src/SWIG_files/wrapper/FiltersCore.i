@@ -589,11 +589,18 @@
 %netvtk_address(%arg(vtkStreamingTessellator::TriangleProcessorFunction))
 %netvtk_address(%arg(vtkStreamingTessellator::VertexProcessorFunction))
 %netvtk_address_ref(%arg(char*))
+%netvtk_object_vector(vtkDataSet)
+%netvtk_object_vector(vtkPolyData)
 %netvtk_sized_return(double, double, 2)
 %netvtk_sized_return(double, double, 3)
 %netvtk_sized_return(double, double, 6)
 %netvtk_sized_return(int, int, 3)
 %netvtk_sized_return(int, int, 6)
+%netvtk_valueclass_vector(vtkConvexHull_Plane)
+%netvtk_valueclass_vector(vtkTuple_int_3)
+%netvtk_vector(double, double)
+%netvtk_vector(int, int)
+%netvtk_vector(vtkIdType, long)
 
 enum class vtkAppendPartitionedDataSetCollection_AppendModes {
   APPEND_PARTITIONS = 0,
@@ -938,6 +945,7 @@ public:
   int GetOutputPointsPrecisionMinValue();
   int GetOutputPointsPrecisionMaxValue();
   int GetOutputPointsPrecision();
+  static void AppendArrays(const std::vector< vtkDataSet* >& datasets, int attributesType, vtkDataSet* output, vtkIdType totalNumberOfElements, bool useImplicit);
 };
 
 class vtkAppendPartitionedDataSetCollection : public vtkPartitionedDataSetCollectionAlgorithm {
@@ -994,10 +1002,30 @@ public:
   void SetOutputPointsPrecision(int _arg);
   int GetOutputPointsPrecision();
   int ExecuteAppend(vtkPolyData* output, NetVtk_Address< vtkPolyData** > inputs, int numInputs);
+  static void AppendCellData(const vtkAppendPolyData_PolyDataOffsets& stats, const std::vector< vtkPolyData* >& inputs, vtkPolyData* output, bool useImplicit);
 };
 
 class vtkAppendPolyData_PolyDataOffsets {
 public:
+  vtkIdType TotalNumberOfPoints;
+  vtkIdType TotalNumberOfCells;
+  vtkIdType TotalNumberOfVerts;
+  vtkIdType TotalNumberOfVertsConnectivity;
+  vtkIdType TotalNumberOfLines;
+  vtkIdType TotalNumberOfLinesConnectivity;
+  vtkIdType TotalNumberOfPolys;
+  vtkIdType TotalNumberOfPolysConnectivity;
+  vtkIdType TotalNumberOfStrips;
+  vtkIdType TotalNumberOfStripsConnectivity;
+  std::vector< vtkIdType > PointOffsets;
+  std::vector< vtkIdType > VertOffsets;
+  std::vector< vtkIdType > VertConnectivityOffsets;
+  std::vector< vtkIdType > LineOffsets;
+  std::vector< vtkIdType > LineConnectivityOffsets;
+  std::vector< vtkIdType > PolyOffsets;
+  std::vector< vtkIdType > PolyConnectivityOffsets;
+  std::vector< vtkIdType > StripOffsets;
+  std::vector< vtkIdType > StripConnectivityOffsets;
 };
 
 class vtkAppendSelection : public vtkSelectionAlgorithm {
@@ -1093,17 +1121,27 @@ public:
   void RemoveVectorVariables();
   void RemoveCoordinateScalarVariables();
   void RemoveCoordinateVectorVariables();
+  const std::vector< std::string >& GetScalarArrayNames();
   std::string GetScalarArrayName(int i);
+  const std::vector< std::string >& GetVectorArrayNames();
   std::string GetVectorArrayName(int i);
+  const std::vector< std::string >& GetScalarVariableNames();
   std::string GetScalarVariableName(int i);
+  const std::vector< std::string >& GetVectorVariableNames();
   std::string GetVectorVariableName(int i);
+  const std::vector< int >& GetSelectedScalarComponents();
   int GetSelectedScalarComponent(int i);
+  %csattributes GetSelectedVectorComponents() "[global::System.Obsolete(\"Deprecated in VTK.\")]";
+  const std::vector< vtkTuple_int_3 >& GetSelectedVectorComponents();
   %csattributes GetSelectedVectorComponents(int arg0) "[global::System.Obsolete(\"Deprecated in VTK.\")]";
   vtkTuple_int_3 GetSelectedVectorComponents(int arg0);
   int GetNumberOfScalarArrays();
   int GetNumberOfVectorArrays();
+  const std::vector< std::string >& GetCoordinateScalarVariableNames();
   std::string GetCoordinateScalarVariableName(int i);
+  const std::vector< std::string >& GetCoordinateVectorVariableNames();
   std::string GetCoordinateVectorVariableName(int i);
+  const std::vector< int >& GetSelectedCoordinateScalarComponents();
   int GetSelectedCoordinateScalarComponent(int i);
   int GetNumberOfCoordinateScalarVariables();
   int GetNumberOfCoordinateVectorVariables();
@@ -1843,6 +1881,8 @@ public:
   int GetNumberOfContours();
   void GenerateValues(int numContours, double* range);
   void GenerateValues(int numContours, double rangeStart, double rangeEnd);
+  void SetContourValues(const std::vector< double >& values);
+  std::vector< double > GetContourValues();
   vtkMTimeType GetMTime();
   void SetComputeNormals(int _arg);
   int GetComputeNormals();
@@ -2000,11 +2040,16 @@ public:
   void GeneratePolyDataOff();
   bool IsPointWithinConvexHull(double x, double y, double z, double tol = 1e-8) const;
   bool IsPointWithinConvexHull(const double* point, double tol = 1e-8) const;
+  static bool IsPointInside(const vtkVector3d& p, const std::vector< vtkConvexHull_Plane >& planes, double tol = 1e-8);
+  static void ComputeConvexHull(vtkDataArray* points, int dimension, std::vector< vtkConvexHull_Plane >& planes);
+  static void ComputeConvexHull(const vtkVector3d* points, int numPoints, int dimension, std::vector< vtkConvexHull_Plane >& planes);
 };
 
 class vtkConvexHull_Plane {
 public:
   vtkConvexHull_Plane();
+  vtkVector3d Normal;
+  double D;
 };
 
 class vtkDataObjectGenerator : public vtkDataObjectAlgorithm {
@@ -3458,6 +3503,10 @@ class vtkMergeFields_Component {
 public:
   vtkMergeFields_Component();
   void SetName(const char* name);
+  int Index;
+  int SourceIndex;
+  const char* const FieldName;
+  vtkMergeFields_Component* const Next;
 };
 
 class vtkMergeFilter : public vtkDataSetAlgorithm {
@@ -4156,6 +4205,14 @@ public:
 class vtkRearrangeFields_Operation {
 public:
   vtkRearrangeFields_Operation();
+  int OperationType;
+  int FieldType;
+  const char* const FieldName;
+  int AttributeType;
+  int FromFieldLoc;
+  int ToFieldLoc;
+  int Id;
+  vtkRearrangeFields_Operation* const Next;
 };
 
 class vtkRectilinearSynchronizedTemplates : public vtkPolyDataAlgorithm {
@@ -4572,6 +4629,7 @@ public:
   void PieceInvariantOff();
   vtkMTimeType GetMTime();
   static void MarkPointUses(vtkCellArray* ca, vtkIdType* mergeMap, unsigned char* ptUses);
+  static vtkIdType BuildPointMap(vtkIdType numPts, vtkIdType* pmap, unsigned char* ptUses, std::vector< vtkIdType >& mergeMap);
   static void CopyPoints(vtkPoints* inPts, vtkPointData* inPD, vtkPoints* outPts, vtkPointData* outPD, vtkIdType* ptMap);
   static void AveragePoints(vtkPoints* inPts, vtkPointData* inPD, vtkPoints* outPts, vtkPointData* outPD, vtkIdType* ptMap, double tol);
 };
@@ -4932,6 +4990,8 @@ public:
   int GetNumberOfSelectedLabels() const;
   void SetSelectedLabel(int i, vtkIdType label);
   vtkIdType GetSelectedLabel(int i) const;
+  std::vector< vtkIdType > GetSelectedLabels() const;
+  void SetSelectedLabels(const std::vector< vtkIdType >& labels);
   void GenerateSelectedLabels(int numLabels, vtkIdType rangeStart, vtkIdType rangeEnd);
   void GenerateSelectedLabels(int numLabels, vtkIdType* range);
   void GenerateSelectedLabels(vtkIdType rangeStart, vtkIdType rangeEnd);
@@ -4962,11 +5022,15 @@ public:
   vtkIdType GetLabelForLID(int lid) const;
   bool AreAdjacent(vtkIdType label0, vtkIdType label1) const;
   bool AreAdjacent(const std::string& name0, const std::string& name1) const;
+  std::vector< vtkIdType > GetAdjacentLabels(vtkIdType label) const;
+  std::vector< vtkIdType > GetAdjacentLabels(const std::string& name) const;
   vtkIdType GetNumberOfPatches() const;
   void GetPatchLabels(int patchID, vtkIdType* labels) const;
   int GetPatchID(vtkIdType label0, vtkIdType label1) const;
   int GetPatchID(const std::string& name0, const std::string& name1) const;
   vtkIdType GetPatchCellCount(int patchID) const;
+  std::vector< int > GetPatchesForLabel(vtkIdType label) const;
+  std::vector< int > GetPatchesForLabel(const std::string& name) const;
 };
 
 class vtkSynchronizedTemplates2D : public vtkPolyDataAlgorithm {

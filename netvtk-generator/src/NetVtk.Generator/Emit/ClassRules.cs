@@ -25,7 +25,7 @@ internal static class ClassRules
   public static bool IsMoveOnly(ClassModel c) =>
     c.Traits is
     {
-      IsCopyable: false, IsMovable: true, IsTransient: false, IsAbstract: false, IsCreatable: true,
+      IsCopyable: false, IsMovable: true, IsVtkObject: false, IsAbstract: false, IsCreatable: true,
       HasPublicDestructor: true
     };
 
@@ -56,8 +56,8 @@ internal static class ClassRules
   /// proxies, which delete them) or plain.
   /// </summary>
   public static WrapKind KindOf(ClassModel c) =>
-    c.Traits.IsTransient
-      ? WrapKind.Transient
+    c.Traits.IsVtkObject
+      ? WrapKind.VtkObject
       :
       c.Traits is
         { IsCopyable: true, IsAbstract: false, IsCreatable: true, HasPublicDestructor: true }

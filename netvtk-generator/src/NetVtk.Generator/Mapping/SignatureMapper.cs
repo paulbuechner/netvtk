@@ -248,6 +248,11 @@ internal sealed partial class SignatureMapper(TypeRegistry registry)
     // a pointer returned by const reference is the pointer
     ReferenceType { IsRValue: false, Referee: PointerType { IsConst: true } p } =>
       ReturnedPointer(p, member),
+    // a copy of the vector: C# has no array that writes through
+    ReferenceType
+    {
+      IsRValue: false, Referee: NamedType { Name: "std::vector", IsConst: false } vector
+    } => Vector(vector, "", "&", writesBack: false),
     ReferenceType => TypeMapping.Skipped($"returns a mutable reference, {type.Spelling}"),
     PointerType p => ReturnedPointer(p, member),
     _ => TypeMapping.Skipped($"returns unsupported type {type.Spelling}"),
@@ -299,6 +304,67 @@ internal sealed partial class SignatureMapper(TypeRegistry registry)
       ? borrowed
       : Return(type, member: owner is not null);
   }
+
+  /// <summary>
+  /// A value class's public data member as a C# property (SWIG's member variable), read and
+  /// written, a const one read only: a number (VTK's width typedefs by their names), bool, enum or
+  /// string; a struct or value class, a copy both ways; a C array of numbers or structs, a C# array
+  /// of its length; a vector (<see cref="StdField"/>); a VTK object's <c>vtkSmartPointer</c>. Read
+  /// only, as C# can't tell who owns what they point to: a VTK object by pointer, spelled <c>T*
+  /// const</c>, whose getter gives the proxy a reference of its own (VtkObjects.i); a C string; a
+  /// pointer to another class, a proxy that borrows the object (References.i); any other pointer,
+  /// an address, spelled <c>void* const</c>, but for a <c>void*</c>, which is written too. Anything
+  /// else is skipped.
+  /// </summary>
+  public TypeMapping Field(CppType type)
+  {
+    var resolved = registry.Resolve(type);
+    var constant = resolved.IsConst ? "const " : "";
+    return resolved switch
+    {
+      BuiltinType { Name: "void" } => TypeMapping.Skipped("a field of void"),
+      BuiltinType b => Number(b, constant + ValueSpelling(b))
+                       ?? TypeMapping.Skipped(
+                         $"a field of {b.Name}, which has no fixed-width C# type"),
+      NamedType { Kind: NamedKind.Enum } e => Enum(e, constant + e.Name),
+      NamedType { Name: "vtkSmartPointer" } handle => Handle(handle, handle, "",
+                                                             byMutableReference: false),
+      NamedType { Name: var name, TemplateArguments.Count: > 0 } std when name.StartsWith(
+        "std::", StringComparison.Ordinal) => StdField(std, constant),
+      NamedType { Kind: NamedKind.Class, TemplateArguments.Count: 0 } c when
+        registry.Class(c.Name) is { Kind: WrapKind.ValueType or WrapKind.ValueClass } known =>
+        TypeMapping.Of(c.Spelling, c.Name, c.Name, known.Use),
+      ArrayType { Element: var element, Length: > 0 } a when FieldElement(element) is { } field =>
+        new TypeMapping(field with
+        {
+          Spelling = a.Spelling, CsKey = $"{field.CsType}[]",
+          CsType = $"{field.CsType}[]", Declared = a
+        }, null),
+      PointerType { Pointee: BuiltinType { Name: "char" } } => TypeMapping.Of(
+        "const char* const", "string", "string"),
+      PointerType { Pointee: NamedType { Kind: NamedKind.Class, TemplateArguments.Count: 0 } n } p
+        when registry.Class(n.Name) is { Kind: WrapKind.VtkObject } known => TypeMapping.Of(
+          (p with { Const = true }).Spelling, n.Name, n.Name, known.Use),
+      PointerType { Pointee: NamedType { Kind: NamedKind.Class, TemplateArguments.Count: 0 } n }
+        when registry.Class(n.Name) is { Kind: not WrapKind.ValueType } known => TypeMapping.Of(
+          $"{n.Name}* const", n.Name, n.Name, known.Use),
+      PointerType { Pointee: BuiltinType { Name: "void" } } p => TypeMapping.Of(
+        p.Spelling, "IntPtr", CsAddress),
+      PointerType => TypeMapping.Of("void* const", "IntPtr", CsAddress),
+      _ => TypeMapping.Skipped($"a field of {resolved.Spelling}: {FieldKinds}"),
+    };
+  }
+
+  // a C array's element, as a field holds it: a number C# arrays hold as C++ does (not bool, char
+  // or char16_t, whose arrays marshal through other typemaps), or a struct
+  private MappedType? FieldElement(CppType element) => element switch
+  {
+    BuiltinType { Name: not ("bool" or "char" or "char16_t") } b when
+      ArrayElements.TryGetValue(b.Name, out var cs) => new MappedType(b.Spelling, [], cs, cs),
+    NamedType { Kind: NamedKind.Class, TemplateArguments.Count: 0 } c when registry.Class(c.Name) is
+      { Kind: WrapKind.ValueType } known => new MappedType(c.Spelling, [known.Use], c.Name, c.Name),
+    _ => null,
+  };
 
   // a number by value as the .i spells it: VTK's width typedefs by their names, which VtkObjects.i
   // maps, so that a director's override declares what VTK declares (vtkMTimeType is unsigned long
@@ -411,7 +477,7 @@ internal sealed partial class SignatureMapper(TypeRegistry registry)
   private TypeMapping Handle(NamedType n, NamedType spelled, string suffix, bool byMutableReference)
   {
     if (n.TemplateArguments is not [NamedType { TemplateArguments.Count: 0 } target]
-        || registry.Class(target.Name) is not { Kind: WrapKind.Transient } known)
+        || registry.Class(target.Name) is not { Kind: WrapKind.VtkObject } known)
     {
       return TypeMapping.Skipped($"handle {n.Spelling} of an unwrapped class");
     }

@@ -15,6 +15,7 @@
 #endif
 
 %netvtk_valuetype(vtkDemoInfo)
+%netvtk_valueclass(vtkDemoHit)
 %vtk_object(vtkDemoSource)
 %vtk_new(vtkDemoSource)
 %nodefaultctor vtkDemoSource;
@@ -35,6 +36,8 @@
 %feature("valuewrapper") vtkDemoIdArray;
 %netvtk_address(%arg(vtkDemoCallback))
 %netvtk_sized_return(double, double, 3)
+%netvtk_vector(double, double)
+%netvtk_vector(vtkIdType, long)
 
 %{
 // Layout guards for the C# structs in src/NetVtk/Demo/: a mismatch fails the native build.
@@ -58,6 +61,17 @@ enum class vtkDemoSource_Notation {
 
 %include "extras/Demo.i"
 
+class vtkDemoHit {
+public:
+  vtkDemoHit();
+  bool Valid;
+  vtkIdType Cell;
+  vtkDemoMode Mode;
+  vtkObject* const Object;
+  double Point[3];
+  const char* const Label;
+};
+
 class vtkDemoSource : public vtkObject {
 public:
   static vtkDemoSource* New();
@@ -75,9 +89,18 @@ public:
   void SetNotation(int value);
   int GetNotation();
   vtkDemoInfo GetInfo() const;
+  %apply SWIGTYPE NETVTK_VIEW { vtkDemoHit GetHit };
+  vtkDemoHit GetHit() const;
+  %clear vtkDemoHit GetHit;
   static void Render(vtkDemoSource* arg0, vtkDemoSource* arg1);
   void Format(int arg0 = 3);
   void SetCallback(NetVtk_Address< vtkDemoCallback > arg0, void* arg1);
+  void SetWeights(const std::vector< double >& arg0);
+  std::vector< vtkIdType > GetIds() const;
+  void GetNames(std::vector< std::string >& arg0) const;
+  %netvtk_sized_ref(const vtkIdType, pts, long, (*arg2))
+  void GetPoints(vtkIdType& npts, const vtkIdType*& pts);
+  %clear const vtkIdType *&pts;
 };
 
 class vtkDemoTemplate_double : public vtkObject {

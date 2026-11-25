@@ -243,15 +243,24 @@ internal static class MemberRules
   /// <param name="keptStream">
   /// Why a stream can't be lent to this member, if it can't (it may keep the stream).
   /// </param>
+  /// <param name="sized">
+  /// The parameters VTK's size hints name, by position, with their counts as the wrapper spells
+  /// them (<see cref="SizeHints"/>): a <c>T*&amp;</c> of numbers is a C# array of that many
+  /// elements; any other pointer an array the callee copies, setter or not (VTK's own wrappers pass
+  /// a temporary one).
+  /// </param>
   internal static List<(ParameterModel Parameter, MappedType Type)>? MapParameters(
     SignatureMapper mapper, string label, IReadOnlyList<ParameterModel> parameters, bool mayKeep,
-    List<string> skipped, string? keptStream = null)
+    List<string> skipped, string? keptStream = null,
+    IReadOnlyDictionary<int, string?>? sized = null)
   {
     List<(ParameterModel Parameter, MappedType Type)> mapped = [];
     for (var i = 0; i < parameters.Count; i++)
     {
       var parameter = parameters[i];
-      var result = mapper.Parameter(parameter.Type, mayKeep);
+      var result = sized is not null && sized.TryGetValue(i, out var size)
+        ? Sized(mapper, parameter.Type, size)
+        : mapper.Parameter(parameter.Type, mayKeep);
       var reason = result.Type is null ? result.Skip :
         keptStream is not null && result.Type.CsType == SignatureMapper.CsStream ? keptStream :
         null;
@@ -273,6 +282,13 @@ internal static class MemberRules
 
     return mapped;
   }
+
+  // a parameter a size hint names: a T*& of numbers a C# array of the count, when the wrapper can
+  // spell it; any other pointer an array, which the callee copies
+  private static TypeMapping Sized(SignatureMapper mapper, CppType type, string? size) =>
+    size is not null && mapper.SizedParameter(type, size) is { } array
+      ? new TypeMapping(array, null)
+      : mapper.Parameter(type, mayKeep: false);
 
   /// <summary>
   /// A member's return in C#, or null: logged, unless a const twin covers the member
@@ -352,6 +368,8 @@ internal static class MemberRules
       .. parameters.Select((p, i) => i >= start && p.Default is { } value ? $" = {value}" : "")
     ];
   }
+
+  internal static bool IsCSharpKeyword(string name) => CSharpKeywords.Contains(name);
 
   // a C# parameter name: a keyword gets a trailing _, a name taken already arg<index>
   internal static string SafeName(string name, int index, HashSet<string> taken)

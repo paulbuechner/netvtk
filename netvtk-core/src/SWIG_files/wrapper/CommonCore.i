@@ -2322,6 +2322,7 @@
 %netvtk_sized_return(unsigned char, byte, 2)
 %netvtk_sized_return(unsigned int, uint, 2)
 %netvtk_sized_return(unsigned short, ushort, 2)
+%netvtk_vector(vtkTypeUInt32, uint)
 
 %{
 // Layout guards for the C# structs in src/NetVtk/CommonCore/: a mismatch fails the native build.
@@ -3554,6 +3555,13 @@ public:
 class vtkLogger_Message {
 public:
   vtkLogger_Message();
+  vtkLogger_Verbosity verbosity;
+  const char* const filename;
+  unsigned int line;
+  const char* const preamble;
+  const char* const indentation;
+  const char* const prefix;
+  const char* const message;
 };
 
 class vtkLogger_LogScopeRAII {
@@ -5635,6 +5643,9 @@ public:
   vtkSMPTools_Config(std::string backend);
   vtkSMPTools_Config(bool nestedParallelism);
   vtkSMPTools_Config(int maxNumberOfThreads, std::string backend, bool nestedParallelism);
+  int MaxNumberOfThreads;
+  std::string Backend;
+  bool NestedParallelism;
 };
 
 class vtkRandomSequence : public vtkObject {
@@ -9894,6 +9905,7 @@ public:
   vtkTypeUInt32 GetId(vtkObjectBase* objectBase) const;
   bool UnRegisterBlob(const std::string& hash);
   vtkSmartPointer<vtkTypeUInt8Array> GetBlob(const std::string& hash, bool copy = true);
+  std::vector< vtkTypeUInt32 > GetDirectDependencies(vtkTypeUInt32 identifier) const;
   void ResetDirectDependencies();
   void ResetDirectDependenciesForNode(vtkTypeUInt32 identifier);
   vtkTypeUInt32 MakeId();
@@ -9918,6 +9930,7 @@ public:
   static vtkIdType GetNumberOfGenerationsFromBaseType(const char* type);
   vtkIdType GetNumberOfGenerationsFromBase(const char* type);
   void PrintSelf(std::ostream& os, vtkIndent indent);
+  vtkObjectBase* const ConstructObject(const std::string& className, const std::vector< std::string >& superClassNames);
   bool DeserializeJSON(const vtkTypeUInt32& identifier, vtkSmartPointer<vtkObjectBase>& objectBase);
   void UnRegisterConstructor(const std::string& className);
   void SetContext(vtkMarshalContext* _arg);
@@ -13557,6 +13570,11 @@ public:
 class vtkMultiThreader_ThreadInfo {
 public:
   vtkMultiThreader_ThreadInfo();
+  int ThreadID;
+  int NumberOfThreads;
+  void* const ActiveFlag;
+  void* const ActiveFlagLock;
+  void* UserData;
 };
 
 class vtkNumberToString {

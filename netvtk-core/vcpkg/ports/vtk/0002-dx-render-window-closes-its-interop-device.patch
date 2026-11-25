@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Paul=20B=C3=BCchner?= <45827409+paulbuechner@users.noreply.github.com>
+Date: Sun, 18 Oct 2026 00:33:54 +0200
+Subject: [PATCH] vtkWin32OpenGLDXRenderWindow: Close the interop device
+
+InitializeDX opens a GL/Direct3D interop device with wglDXOpenDeviceNV,
+which holds a reference to the D3D device until wglDXCloseDeviceNV closes
+it. Nothing closed it: the destructor was defaulted. Every window kept its
+D3D device alive after it was deleted, and with the device the textures
+made on it, the application's own included: a process that made and
+deleted DX windows grew by the device and its textures with each window.
+
+The destructor now unregisters the shared textures and closes the interop
+device with the window's context current, before the superclass
+destructor deletes that context. A window whose context is gone already
+(Finalize) is left as it was: its shared textures were registered with
+textures of that context.
+---
+ Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx b/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx
+index b4eefed..4aeda6f 100644
+--- a/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx
++++ b/Rendering/OpenGL2/vtkWin32OpenGLDXRenderWindow.cxx
+@@ -56,7 +56,19 @@ vtkWin32OpenGLDXRenderWindow::vtkWin32OpenGLDXRenderWindow()
+ }
+ 
+ //------------------------------------------------------------------------------
+-vtkWin32OpenGLDXRenderWindow::~vtkWin32OpenGLDXRenderWindow() = default;
++vtkWin32OpenGLDXRenderWindow::~vtkWin32OpenGLDXRenderWindow()
++{
++  // The interop device holds the D3D device, and with it the textures made on it, until it is
++  // closed. Unregister the shared textures and close it while this window's OpenGL context lives:
++  // the superclass destructor deletes the context.
++  if (this->Impl->DeviceHandle && this->ContextId)
++  {
++    this->UnregisterSharedTexture();
++    this->MakeCurrent();
++    wglDXCloseDeviceNV(this->Impl->DeviceHandle);
++    this->Impl->DeviceHandle = nullptr;
++  }
++}
+ 
+ //------------------------------------------------------------------------------
+ void vtkWin32OpenGLDXRenderWindow::SetD3DDeviceContext(ID3D11DeviceContext* context)

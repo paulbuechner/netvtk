@@ -11,7 +11,8 @@ namespace NetVtk.Viewer;
 
 /// <summary>
 /// A VTK render window drawing into a native window, with a renderer and a trackball camera.
-/// <see cref="ViewerWindow"/>'s messages drive it: VTK's own window procedure stays out, so input
+/// <see cref="ViewerWindow"/>'s messages drive it (<see cref="X11ViewerWindow"/>'s events,
+/// <see cref="CocoaViewerView"/>'s overrides): VTK's own window procedure stays out, so input
 /// reaches the interactor from C#, where an exception a C# observer throws comes back.
 /// </summary>
 public sealed class VtkViewer : IDisposable
@@ -65,7 +66,9 @@ public sealed class VtkViewer : IDisposable
     Redraw();
   }
 
-  /// <summary>Draws into <paramref name="handle"/> (an HWND) from now on.</summary>
+  /// <summary>
+  /// Draws into <paramref name="handle"/> (an HWND, or an NSView on macOS) from now on.
+  /// </summary>
   public void Attach(IntPtr handle)
   {
     _window.SetWindowId(handle);
@@ -102,6 +105,12 @@ public sealed class VtkViewer : IDisposable
   }
 
   public void Redraw() => _window.Render();
+
+  /// <summary>
+  /// Text keeps its size on a screen of <paramref name="pixels"/> pixels a point (2 on a Retina
+  /// screen): VTK's DPI, 72 at one pixel a point.
+  /// </summary>
+  public void SetPixelsPerPoint(double pixels) => _window.SetDPI((int)Math.Round(72 * pixels));
 
   public void MouseMove(int x, int y, ViewerModifiers modifiers)
   {

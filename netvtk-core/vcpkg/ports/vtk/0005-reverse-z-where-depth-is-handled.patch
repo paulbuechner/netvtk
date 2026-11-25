@@ -1,0 +1,2693 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Paul=20B=C3=BCchner?=
+ <45827409+paulbuechner@users.noreply.github.com>
+Date: Wed, 21 Oct 2026 17:54:38 +0200
+Subject: [PATCH] vtkRenderWindow: Reverse Z where depth is computed, compared
+ or converted
+
+UseReverseZ reversed the depth of the polygon mappers, the camera and
+the renderer's conversions. Everything that writes, clears, compares or
+converts depth itself kept the conventional range, so with reverse Z on
+it drew wrong or not at all: 2-D actors at NDC z -1 fell outside the
+[0, 1] clip range and vanished, impostor spheres and tubes, the sphere
+and stick mappers and the volumes wrote conventional depth, translucent
+passes peeled in the wrong order, and pickers took the farthest depth
+for the nearest.
+
+Each of them now follows the window's UseReverseZ, read when it renders
+(a uniform, or a bit in the polydata mapper's shader-change value where
+the convention is part of a shader's source):
+- mappers: points as spheres and lines as tubes (both polydata mappers),
+  the sphere and stick mappers, the low-memory mapper's coincident
+  topology, the labeled mappers' offsets, 2-D actors (foreground at NDC
+  1, background at 0), the skybox and the fluid mapper;
+- passes: depth peeling and dual depth peeling, order-independent
+  translucency, SSAO, eye-dome lighting, depth of field, point fill, the
+  shadow-map baker, the value pass and vtkClearZPass;
+- pickers and widgets: vtkRenderer::GetZ and PickProp, the hardware
+  selector, vtkWorldPointPicker, vtkSelectVisiblePoints, vtkAreaPicker,
+  the 3-D point pickers and the representations that build rays or
+  place props on the near plane;
+- volumes: the GPU ray cast mapper's depth conversions, termination and
+  written depth, projected tetrahedra, and the CPU ray cast and sweep
+  mappers.
+
+Passes that work on conventional depth formulas (dual depth peeling,
+SSAO, EDL, depth of field, point fill, the shadow baker, the CPU volume
+mappers) take 1 - depth: correct, at conventional precision. No member
+is added; behaviour without reverse Z is unchanged.
+---
+ .../vtkInteractorStyleRubberBandZoom.cxx      |  12 +-
+ .../Widgets/vtkAffineRepresentation2D.cxx     |  13 +-
+ .../Widgets/vtkAngleRepresentation2D.cxx      |   9 +-
+ .../vtkBiDimensionalRepresentation2D.cxx      |  16 +-
+ .../Widgets/vtkBoundedPlanePointPlacer.cxx    |   8 +-
+ ...tkConstrainedPointHandleRepresentation.cxx |  12 +-
+ .../Widgets/vtkContourRepresentation.cxx      |   9 +-
+ .../Widgets/vtkMagnifierRepresentation.cxx    |   6 +-
+ .../vtkPointHandleRepresentation2D.cxx        |   7 +-
+ Interaction/Widgets/vtkPointPlacer.cxx        |   5 +-
+ .../Widgets/vtkPolyDataPointPlacer.cxx        |   6 +-
+ .../Widgets/vtkSliderRepresentation3D.cxx     |   6 +-
+ Rendering/Annotation/vtkCubeAxesActor.cxx     |  10 ++
+ Rendering/Annotation/vtkCubeAxesActor2D.cxx   |  10 ++
+ Rendering/Annotation/vtkLegendScaleActor.cxx  |  31 ++--
+ Rendering/Annotation/vtkRadialGridActor2D.cxx |  10 +-
+ Rendering/Core/vtkAreaPicker.cxx              |  24 ++-
+ Rendering/Core/vtkHardwarePicker.cxx          |  10 +-
+ Rendering/Core/vtkHardwareSelector.cxx        |  18 +-
+ Rendering/Core/vtkPicker.cxx                  |   8 +-
+ Rendering/Core/vtkRenderWindow.h              |   8 +-
+ Rendering/Core/vtkRenderer.cxx                |  20 ++-
+ Rendering/Core/vtkRendererSource.cxx          |   7 +-
+ Rendering/Core/vtkSelectVisiblePoints.cxx     |  12 +-
+ Rendering/Core/vtkWorldPointPicker.cxx        |   8 +-
+ ...penGLBatchedLabeledDataMapperInternals.cxx |  34 ++--
+ .../OpenGL2/glsl/vtkDepthOfFieldPassFS.glsl   |  15 +-
+ Rendering/OpenGL2/glsl/vtkEDLShadeFS.glsl     |   6 +
+ Rendering/OpenGL2/glsl/vtkFluidMapperFS.glsl  |   7 +-
+ .../OpenGL2/glsl/vtkFluidMapperFinalFS.glsl   |   7 +-
+ .../OpenGL2/glsl/vtkPointFillPassFS.glsl      |  15 +-
+ Rendering/OpenGL2/vtkClearZPass.cxx           |   6 +-
+ Rendering/OpenGL2/vtkClearZPass.h             |   3 +-
+ Rendering/OpenGL2/vtkDepthOfFieldPass.cxx     |   1 +
+ Rendering/OpenGL2/vtkDepthPeelingPass.cxx     |  32 +++-
+ Rendering/OpenGL2/vtkDualDepthPeelingPass.cxx | 154 ++++++++++++------
+ Rendering/OpenGL2/vtkEDLShading.cxx           |   4 +-
+ .../OpenGL2/vtkFastLabeledDataMapper.cxx      |  18 ++
+ .../OpenGL2/vtkGLSLModCoincidentTopology.cxx  |  22 ++-
+ Rendering/OpenGL2/vtkOpenGLFluidMapper.cxx    |  19 ++-
+ .../vtkOpenGLLowMemoryPolyDataMapper.cxx      |  10 +-
+ .../OpenGL2/vtkOpenGLPointGaussianMapper.cxx  |   7 +-
+ Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx |  12 +-
+ .../OpenGL2/vtkOpenGLPolyDataMapper2D.cxx     |   8 +-
+ Rendering/OpenGL2/vtkOpenGLSkybox.cxx         |  19 ++-
+ Rendering/OpenGL2/vtkOpenGLSphereMapper.cxx   |   7 +
+ Rendering/OpenGL2/vtkOpenGLStickMapper.cxx    |   7 +
+ .../vtkOrderIndependentTranslucentPass.cxx    |  22 ++-
+ Rendering/OpenGL2/vtkPointFillPass.cxx        |   1 +
+ Rendering/OpenGL2/vtkSSAOPass.cxx             |  22 ++-
+ Rendering/OpenGL2/vtkShadowMapBakerPass.cxx   |  11 +-
+ Rendering/OpenGL2/vtkValuePass.cxx            |   5 +-
+ .../vtkFixedPointVolumeRayCastMapper.cxx      |  12 ++
+ .../Volume/vtkRayCastImageDisplayHelper.h     |   7 +
+ ...vtkUnstructuredGridVolumeRayCastMapper.cxx |  11 ++
+ .../vtkUnstructuredGridVolumeZSweepMapper.cxx |  11 ++
+ .../VolumeOpenGL2/shaders/raycasterfs.glsl    |  24 ++-
+ .../vtkOpenGLGPUVolumeRayCastMapper.cxx       |  43 ++++-
+ .../vtkOpenGLGPUVolumeRayCastMapper.h         |   6 +-
+ .../vtkOpenGLProjectedTetrahedraMapper.cxx    |  45 +++--
+ .../vtkOpenGLRayCastImageDisplayHelper.cxx    |  13 +-
+ .../VolumeOpenGL2/vtkVolumeShaderComposer.h   |  25 ++-
+ 62 files changed, 734 insertions(+), 222 deletions(-)
+
+diff --git a/Interaction/Style/vtkInteractorStyleRubberBandZoom.cxx b/Interaction/Style/vtkInteractorStyleRubberBandZoom.cxx
+index 9fa88a74..b3698d0e 100644
+--- a/Interaction/Style/vtkInteractorStyleRubberBandZoom.cxx
++++ b/Interaction/Style/vtkInteractorStyleRubberBandZoom.cxx
+@@ -230,8 +230,11 @@ void vtkInteractorStyleRubberBandZoom::Zoom()
+ vtkVector3d vtkInteractorStyleRubberBandZoom::CalculatePerspectiveZoomFocalPoint(
+   const vtkRecti& box) const
+ {
++  // on the near plane: at display z 1 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->CurrentRenderer->GetRenderWindow();
++  const double nearZ = renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0;
+   const vtkVector2d rbCenter2d = box.GetCenter();
+-  const vtkVector3d rbCenter3d = vtkVector3d(rbCenter2d.GetX(), rbCenter2d.GetY(), 0.0);
++  const vtkVector3d rbCenter3d = vtkVector3d(rbCenter2d.GetX(), rbCenter2d.GetY(), nearZ);
+   const vtkVector3d worldRBCenter = this->CurrentRenderer->DisplayToWorld(rbCenter3d);
+ 
+   return worldRBCenter;
+@@ -243,12 +246,15 @@ void vtkInteractorStyleRubberBandZoom::ZoomTraditional(const vtkRecti& box)
+   const int* origin = this->CurrentRenderer->GetOrigin();
+   vtkCamera* cam = this->CurrentRenderer->GetActiveCamera();
+ 
++  // on the near plane: at display z 1 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->CurrentRenderer->GetRenderWindow();
++  const double nearZ = renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0;
+   const vtkVector2d rbCenter2d = box.GetCenter();
+-  const vtkVector3d rbCenter3d = vtkVector3d(rbCenter2d.GetX(), rbCenter2d.GetY(), 0.0);
++  const vtkVector3d rbCenter3d = vtkVector3d(rbCenter2d.GetX(), rbCenter2d.GetY(), nearZ);
+   const vtkVector3d worldRBCenter = this->CurrentRenderer->DisplayToWorld(rbCenter3d);
+ 
+   const vtkVector2d winCenter2d = vtkRecti(origin[0], origin[1], size[0], size[1]).GetCenter();
+-  const vtkVector3d winCenter3d = vtkVector3d(winCenter2d.GetX(), winCenter2d.GetY(), 0.0);
++  const vtkVector3d winCenter3d = vtkVector3d(winCenter2d.GetX(), winCenter2d.GetY(), nearZ);
+   const vtkVector3d worldWinCenter = this->CurrentRenderer->DisplayToWorld(winCenter3d);
+   const vtkVector3d translation = worldRBCenter - worldWinCenter;
+ 
+diff --git a/Interaction/Widgets/vtkAffineRepresentation2D.cxx b/Interaction/Widgets/vtkAffineRepresentation2D.cxx
+index cb7531a4..cf7be573 100644
+--- a/Interaction/Widgets/vtkAffineRepresentation2D.cxx
++++ b/Interaction/Widgets/vtkAffineRepresentation2D.cxx
+@@ -13,6 +13,7 @@
+ #include "vtkPolyDataAlgorithm.h"
+ #include "vtkPolyDataMapper2D.h"
+ #include "vtkProperty2D.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkTextMapper.h"
+@@ -417,8 +418,10 @@ void vtkAffineRepresentation2D::StartWidgetInteraction(double startEventPos[2])
+   this->StartEventPosition[0] = startEventPos[0];
+   this->StartEventPosition[1] = startEventPos[1];
+   this->StartEventPosition[2] = 0.0;
+-  vtkInteractorObserver::ComputeDisplayToWorld(
+-    this->Renderer, startEventPos[0], startEventPos[1], 0.0, this->StartWorldPosition);
++  // on the near plane: at display z 1 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++  vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, startEventPos[0], startEventPos[1],
++    renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0, this->StartWorldPosition);
+ 
+   this->StartAngle = VTK_FLOAT_MAX;
+ 
+@@ -548,9 +551,13 @@ void vtkAffineRepresentation2D::Translate(double eventPos[2])
+   this->HYAxis->GetPosition2Coordinate()->SetValue(y2);
+ 
+   // Update the transform
++  // on the near plane, as the start position: at display z 1 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
+   double wxyz[4];
+   vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer,
+-    this->StartEventPosition[0] + dpos[0], this->StartEventPosition[1] + dpos[1], 0.0, wxyz);
++    this->StartEventPosition[0] + dpos[0], this->StartEventPosition[1] + dpos[1],
++    renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0, wxyz);
+ 
+   this->CurrentTranslation[0] = wxyz[0] - this->StartWorldPosition[0];
+   this->CurrentTranslation[1] = wxyz[1] - this->StartWorldPosition[1];
+diff --git a/Interaction/Widgets/vtkAngleRepresentation2D.cxx b/Interaction/Widgets/vtkAngleRepresentation2D.cxx
+index 9839bb73..a89622e1 100644
+--- a/Interaction/Widgets/vtkAngleRepresentation2D.cxx
++++ b/Interaction/Widgets/vtkAngleRepresentation2D.cxx
+@@ -7,6 +7,7 @@
+ #include "vtkMath.h"
+ #include "vtkObjectFactory.h"
+ #include "vtkPointHandleRepresentation2D.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkVector.h"
+@@ -312,9 +313,13 @@ void vtkAngleRepresentation2D::BuildRepresentation()
+   }
+   else
+   {
++    // on the near plane, where the display positions' depth of 0 puts them: at display z 1 when
++    // the depth is reversed (vtkRenderWindow::UseReverseZ)
++    vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++    const double nearZ = renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0;
+     double w1b[4], w2b[4];
+-    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, a1[0], a1[1], a1[2], w1b);
+-    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, a2[0], a2[1], a2[2], w2b);
++    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, a1[0], a1[1], nearZ, w1b);
++    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, a2[0], a2[1], nearZ, w2b);
+     w1 = { w1b[0] / w1b[3], w1b[1] / w1b[3], w1b[2] / w1b[3] };
+     w2 = { w2b[0] / w2b[3], w2b[1] / w2b[3], w2b[2] / w2b[3] };
+   }
+diff --git a/Interaction/Widgets/vtkBiDimensionalRepresentation2D.cxx b/Interaction/Widgets/vtkBiDimensionalRepresentation2D.cxx
+index 1a070e8f..451ace97 100644
+--- a/Interaction/Widgets/vtkBiDimensionalRepresentation2D.cxx
++++ b/Interaction/Widgets/vtkBiDimensionalRepresentation2D.cxx
+@@ -13,6 +13,7 @@
+ #include "vtkPolyData.h"
+ #include "vtkPolyDataMapper2D.h"
+ #include "vtkProperty2D.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkTextMapper.h"
+@@ -362,7 +363,9 @@ void vtkBiDimensionalRepresentation2D::StartWidgetManipulation(double e[2])
+ 
+   if (this->Renderer)
+   {
+-    this->Renderer->SetDisplayPoint(e[0], e[1], 0.0);
++    // on the near plane: at display z 1 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++    vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++    this->Renderer->SetDisplayPoint(e[0], e[1], renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0);
+     this->Renderer->DisplayToWorld();
+     this->Renderer->GetWorldPoint(this->StartEventPositionWorld);
+   }
+@@ -430,7 +433,9 @@ void vtkBiDimensionalRepresentation2D::WidgetInteraction(double e[2])
+   // Okay, go to work, convert this event to world coordinates
+   double pw[4], t, closest[3];
+   double p1[3], p2[3], p3[3], p4[3];
+-  this->Renderer->SetDisplayPoint(e[0], e[1], 0.0);
++  // on the near plane: at display z 1 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++  this->Renderer->SetDisplayPoint(e[0], e[1], renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0);
+   this->Renderer->DisplayToWorld();
+   this->Renderer->GetWorldPoint(pw);
+ 
+@@ -704,6 +709,13 @@ void vtkBiDimensionalRepresentation2D::GetWorldLabelPosition(double pos[3])
+     return;
+   }
+   this->TextActor->GetPositionCoordinate()->GetValue(viewportPos);
++  // a depth of 0 is the near plane, which is at 1 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++  if (renWin && renWin->GetUseReverseZ())
++  {
++    viewportPos[2] = 1.0 - viewportPos[2];
++  }
+   this->Renderer->ViewportToNormalizedViewport(viewportPos[0], viewportPos[1]);
+   this->Renderer->NormalizedViewportToView(viewportPos[0], viewportPos[1], viewportPos[2]);
+   this->Renderer->SetViewPoint(viewportPos);
+diff --git a/Interaction/Widgets/vtkBoundedPlanePointPlacer.cxx b/Interaction/Widgets/vtkBoundedPlanePointPlacer.cxx
+index fc73f5d4..d61da59b 100644
+--- a/Interaction/Widgets/vtkBoundedPlanePointPlacer.cxx
++++ b/Interaction/Widgets/vtkBoundedPlanePointPlacer.cxx
+@@ -9,6 +9,7 @@
+ #include "vtkPlane.h"
+ #include "vtkPlaneCollection.h"
+ #include "vtkPlanes.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ 
+ #include <algorithm>
+@@ -151,15 +152,18 @@ int vtkBoundedPlanePointPlacer::ComputeWorldPosition(
+   double farWorldPoint[4];
+   double tmp[3];
+ 
++  // the near plane is at display z 1 and the far one at 0 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ = ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ();
+   tmp[0] = displayPos[0];
+   tmp[1] = displayPos[1];
+-  tmp[2] = 0.0; // near plane
++  tmp[2] = reverseZ ? 1.0 : 0.0; // near plane
+ 
+   ren->SetDisplayPoint(tmp);
+   ren->DisplayToWorld();
+   ren->GetWorldPoint(nearWorldPoint);
+ 
+-  tmp[2] = 1.0; // far plane
++  tmp[2] = reverseZ ? 0.0 : 1.0; // far plane
+   ren->SetDisplayPoint(tmp);
+   ren->DisplayToWorld();
+   ren->GetWorldPoint(farWorldPoint);
+diff --git a/Interaction/Widgets/vtkConstrainedPointHandleRepresentation.cxx b/Interaction/Widgets/vtkConstrainedPointHandleRepresentation.cxx
+index 721898e6..00734f77 100644
+--- a/Interaction/Widgets/vtkConstrainedPointHandleRepresentation.cxx
++++ b/Interaction/Widgets/vtkConstrainedPointHandleRepresentation.cxx
+@@ -457,19 +457,23 @@ int vtkConstrainedPointHandleRepresentation::GetIntersectionPosition(
+   double farWorldPoint[4];
+   double tmp[3];
+ 
+-  tmp[0] = eventPos[0] + this->InteractionOffset[0];
+-  tmp[1] = eventPos[1] + this->InteractionOffset[1];
+-  tmp[2] = 0.0; // near plane
+   if (renderer == nullptr)
+   {
+     renderer = this->Renderer;
+   }
++  // the near plane is at display z 1 and the far one at 0 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ =
++    renderer->GetRenderWindow() && renderer->GetRenderWindow()->GetUseReverseZ();
++  tmp[0] = eventPos[0] + this->InteractionOffset[0];
++  tmp[1] = eventPos[1] + this->InteractionOffset[1];
++  tmp[2] = reverseZ ? 1.0 : 0.0; // near plane
+ 
+   renderer->SetDisplayPoint(tmp);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(nearWorldPoint);
+ 
+-  tmp[2] = 1.0; // far plane
++  tmp[2] = reverseZ ? 0.0 : 1.0; // far plane
+   renderer->SetDisplayPoint(tmp);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(farWorldPoint);
+diff --git a/Interaction/Widgets/vtkContourRepresentation.cxx b/Interaction/Widgets/vtkContourRepresentation.cxx
+index 47b0f726..c7d6d2d5 100644
+--- a/Interaction/Widgets/vtkContourRepresentation.cxx
++++ b/Interaction/Widgets/vtkContourRepresentation.cxx
+@@ -17,6 +17,7 @@
+ #include "vtkObjectFactory.h"
+ #include "vtkPointPlacer.h"
+ #include "vtkPolyData.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkWindow.h"
+ 
+@@ -656,14 +657,18 @@ int vtkContourRepresentation::FindClosestPointOnContour(
+   double p1[4], p2[4], *p3 = nullptr, *p4 = nullptr;
+ 
+   double tmp1[4], tmp2[4];
++  // the near plane is at display z 1 and the far one at 0 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++  const bool reverseZ = renWin && renWin->GetUseReverseZ();
+   tmp1[0] = X;
+   tmp1[1] = Y;
+-  tmp1[2] = 0.0;
++  tmp1[2] = reverseZ ? 1.0 : 0.0;
+   this->Renderer->SetDisplayPoint(tmp1);
+   this->Renderer->DisplayToWorld();
+   this->Renderer->GetWorldPoint(p1);
+ 
+-  tmp1[2] = 1.0;
++  tmp1[2] = reverseZ ? 0.0 : 1.0;
+   this->Renderer->SetDisplayPoint(tmp1);
+   this->Renderer->DisplayToWorld();
+   this->Renderer->GetWorldPoint(p2);
+diff --git a/Interaction/Widgets/vtkMagnifierRepresentation.cxx b/Interaction/Widgets/vtkMagnifierRepresentation.cxx
+index a23352cf..bd3982bf 100644
+--- a/Interaction/Widgets/vtkMagnifierRepresentation.cxx
++++ b/Interaction/Widgets/vtkMagnifierRepresentation.cxx
+@@ -126,8 +126,10 @@ void vtkMagnifierRepresentation::WidgetInteraction(double eventPos[2])
+   magCam->DeepCopy(cam);
+   magCam->SetViewAngle(viewAngle / this->MagnificationFactor);
+ 
+-  // Specify the focal point
+-  this->Coordinate->SetValue(XF, YF);
++  // Specify the focal point, on the near plane: at display z 1 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  this->Coordinate->SetValue(
++    XF, YF, this->Renderer->GetRenderWindow()->GetUseReverseZ() ? 1.0 : 0.0);
+   double* focal = this->Coordinate->GetComputedWorldValue(this->Renderer);
+   this->MagnificationRenderer->GetActiveCamera()->SetFocalPoint(focal);
+ 
+diff --git a/Interaction/Widgets/vtkPointHandleRepresentation2D.cxx b/Interaction/Widgets/vtkPointHandleRepresentation2D.cxx
+index 725d5e9d..c1229626 100644
+--- a/Interaction/Widgets/vtkPointHandleRepresentation2D.cxx
++++ b/Interaction/Widgets/vtkPointHandleRepresentation2D.cxx
+@@ -16,6 +16,7 @@
+ #include "vtkPolyDataAlgorithm.h"
+ #include "vtkPolyDataMapper2D.h"
+ #include "vtkProperty2D.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkWindow.h"
+ 
+@@ -140,7 +141,11 @@ void vtkPointHandleRepresentation2D::SetDisplayPosition(double p[3])
+   double w[4];
+   if (this->Renderer)
+   {
+-    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, p[0], p[1], p[2], w);
++    // the handle's display depth counts from the near plane, which is at 1 when the depth is
++    // reversed (vtkRenderWindow::UseReverseZ)
++    vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++    const double z = renWin && renWin->GetUseReverseZ() ? 1.0 - p[2] : p[2];
++    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, p[0], p[1], z, w);
+     this->SetWorldPosition(w);
+   }
+ }
+diff --git a/Interaction/Widgets/vtkPointPlacer.cxx b/Interaction/Widgets/vtkPointPlacer.cxx
+index 07326afb..be23da26 100644
+--- a/Interaction/Widgets/vtkPointPlacer.cxx
++++ b/Interaction/Widgets/vtkPointPlacer.cxx
+@@ -4,6 +4,7 @@
+ 
+ #include "vtkCoordinate.h"
+ #include "vtkObjectFactory.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ 
+ VTK_ABI_NAMESPACE_BEGIN
+@@ -34,7 +35,9 @@ int vtkPointPlacer::ComputeWorldPosition(
+   {
+     vtkCoordinate* dpos = vtkCoordinate::New();
+     dpos->SetCoordinateSystemToDisplay();
+-    dpos->SetValue(displayPos[0], displayPos[1]);
++    // on the near plane: at display z 1 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++    vtkRenderWindow* renWin = ren->GetRenderWindow();
++    dpos->SetValue(displayPos[0], displayPos[1], renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0);
+     double* p = dpos->GetComputedWorldValue(ren);
+     worldPos[0] = p[0];
+     worldPos[1] = p[1];
+diff --git a/Interaction/Widgets/vtkPolyDataPointPlacer.cxx b/Interaction/Widgets/vtkPolyDataPointPlacer.cxx
+index be7415e0..c4fef6d3 100644
+--- a/Interaction/Widgets/vtkPolyDataPointPlacer.cxx
++++ b/Interaction/Widgets/vtkPolyDataPointPlacer.cxx
+@@ -9,6 +9,7 @@
+ #include "vtkProp.h"
+ #include "vtkPropCollection.h"
+ #include "vtkPropPicker.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ 
+ VTK_ABI_NAMESPACE_BEGIN
+@@ -107,7 +108,10 @@ int vtkPolyDataPointPlacer::ComputeWorldPosition(
+           double displyPos[3];
+           vtkInteractorObserver::ComputeWorldToDisplay(
+             ren, worldPos[0], worldPos[1], worldPos[2], displyPos);
+-          displyPos[2] -= 0.01;
++          // toward the eye: the depth is the greater the nearer when reversed
++          // (vtkRenderWindow::UseReverseZ)
++          vtkRenderWindow* renWin = ren->GetRenderWindow();
++          displyPos[2] += renWin && renWin->GetUseReverseZ() ? 0.01 : -0.01;
+           double w[4];
+           vtkInteractorObserver::ComputeDisplayToWorld(
+             ren, displyPos[0], displyPos[1], displyPos[2], w);
+diff --git a/Interaction/Widgets/vtkSliderRepresentation3D.cxx b/Interaction/Widgets/vtkSliderRepresentation3D.cxx
+index ebb986c5..1ef19c13 100644
+--- a/Interaction/Widgets/vtkSliderRepresentation3D.cxx
++++ b/Interaction/Widgets/vtkSliderRepresentation3D.cxx
+@@ -386,9 +386,13 @@ double vtkSliderRepresentation3D::ComputePickPosition(double eventPos[2])
+   cameraWorldPosition[3] = 1.0;
+   this->Transform->TransformPoint(cameraWorldPosition, cameraPosition);
+ 
++  // the back clipping plane is at display z 0 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++  const double farZ = renWin && renWin->GetUseReverseZ() ? 0.0 : 1.0;
+   double rayEndPoint[4], rayPosition[4];
+   vtkInteractorObserver::ComputeDisplayToWorld(
+-    this->Renderer, eventPos[0], eventPos[1], 1.0, rayEndPoint);
++    this->Renderer, eventPos[0], eventPos[1], farZ, rayEndPoint);
+   this->Transform->TransformPoint(rayEndPoint, rayPosition);
+ 
+   // Now intersect the two lines and compute the pick position
+diff --git a/Rendering/Annotation/vtkCubeAxesActor.cxx b/Rendering/Annotation/vtkCubeAxesActor.cxx
+index f460c89d..9a4bb957 100644
+--- a/Rendering/Annotation/vtkCubeAxesActor.cxx
++++ b/Rendering/Annotation/vtkCubeAxesActor.cxx
+@@ -13,6 +13,7 @@
+ #include "vtkPlanes.h"
+ #include "vtkProp3DAxisFollower.h"
+ #include "vtkProperty.h"
++#include "vtkRenderWindow.h"
+ #include "vtkStringArray.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkTextProperty.h"
+@@ -645,6 +646,11 @@ void vtkCubeAxesActor::TransformBounds(
+ 
+   double x[3];
+ 
++  // depths compare as conventional ones, the nearer the smaller: a reversed depth
++  // (vtkRenderWindow::UseReverseZ) is 1 minus the conventional one
++  vtkRenderWindow* renWin = vtkRenderWindow::SafeDownCast(viewport->GetVTKWindow());
++  const bool reverseZ = renWin && renWin->GetUseReverseZ();
++
+   // loop over verts of bounding box
+   for (int idx = 0; idx < 8; ++idx)
+   {
+@@ -652,6 +658,10 @@ void vtkCubeAxesActor::TransformBounds(
+     viewport->SetWorldPoint(x[0], x[1], x[2], 1.);
+     viewport->WorldToDisplay();
+     viewport->GetDisplayPoint(pts[idx]);
++    if (reverseZ)
++    {
++      pts[idx][2] = 1.0 - pts[idx][2];
++    }
+   }
+ }
+ 
+diff --git a/Rendering/Annotation/vtkCubeAxesActor2D.cxx b/Rendering/Annotation/vtkCubeAxesActor2D.cxx
+index cbfab406..8369c369 100644
+--- a/Rendering/Annotation/vtkCubeAxesActor2D.cxx
++++ b/Rendering/Annotation/vtkCubeAxesActor2D.cxx
+@@ -7,6 +7,7 @@
+ #include "vtkDataSet.h"
+ #include "vtkMath.h"
+ #include "vtkObjectFactory.h"
++#include "vtkRenderWindow.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkTextProperty.h"
+ #include "vtkTrivialProducer.h"
+@@ -989,6 +990,11 @@ void vtkCubeAxesActor2D::TransformBounds(vtkViewport* viewport, double bounds[6]
+   int i, j, k, idx;
+   double x[3];
+ 
++  // depths compare as conventional ones, the nearer the smaller: a reversed depth
++  // (vtkRenderWindow::UseReverseZ) is 1 minus the conventional one
++  vtkRenderWindow* renWin = vtkRenderWindow::SafeDownCast(viewport->GetVTKWindow());
++  const bool reverseZ = renWin && renWin->GetUseReverseZ();
++
+   // loop over verts of bounding box
+   for (k = 0; k < 2; k++)
+   {
+@@ -1003,6 +1009,10 @@ void vtkCubeAxesActor2D::TransformBounds(vtkViewport* viewport, double bounds[6]
+         viewport->SetWorldPoint(x[0], x[1], x[2], 1.0);
+         viewport->WorldToDisplay();
+         viewport->GetDisplayPoint(pts[idx]);
++        if (reverseZ)
++        {
++          pts[idx][2] = 1.0 - pts[idx][2];
++        }
+       }
+     }
+   }
+diff --git a/Rendering/Annotation/vtkLegendScaleActor.cxx b/Rendering/Annotation/vtkLegendScaleActor.cxx
+index 6273c017..38b71554 100644
+--- a/Rendering/Annotation/vtkLegendScaleActor.cxx
++++ b/Rendering/Annotation/vtkLegendScaleActor.cxx
+@@ -16,6 +16,7 @@
+ #include "vtkPolyData.h"
+ #include "vtkPolyDataMapper2D.h"
+ #include "vtkProperty2D.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkTextMapper.h"
+@@ -328,39 +329,43 @@ void vtkLegendScaleActor::UpdateAxisRange(vtkAxisActor2D* axis, vtkViewport* vie
+ //------------------------------------------------------------------------------
+ void vtkLegendScaleActor::BuildRepresentation(vtkViewport* viewport)
+ {
+-  // Specify the locations of the axes.
++  // Specify the locations of the axes, on the near plane: at depth 1 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
+   const int* size = viewport->GetSize();
++  vtkRenderWindow* renWin = vtkRenderWindow::SafeDownCast(viewport->GetVTKWindow());
++  const double nearZ = renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0;
+ 
+   this->RightAxis->GetPositionCoordinate()->SetValue(
+-    size[0] - this->RightBorderOffset, this->CornerOffsetFactor * this->BottomBorderOffset, 0.0);
++    size[0] - this->RightBorderOffset, this->CornerOffsetFactor * this->BottomBorderOffset, nearZ);
+   this->RightAxis->GetPosition2Coordinate()->SetValue(size[0] - this->RightBorderOffset,
+-    size[1] - this->CornerOffsetFactor * this->TopBorderOffset, 0.0);
++    size[1] - this->CornerOffsetFactor * this->TopBorderOffset, nearZ);
+ 
+   this->TopAxis->GetPositionCoordinate()->SetValue(
+     size[0] - this->CornerOffsetFactor * this->RightBorderOffset, size[1] - this->TopBorderOffset,
+-    0.0);
++    nearZ);
+   this->TopAxis->GetPosition2Coordinate()->SetValue(
+-    this->CornerOffsetFactor * this->LeftBorderOffset, size[1] - this->TopBorderOffset, 0.0);
++    this->CornerOffsetFactor * this->LeftBorderOffset, size[1] - this->TopBorderOffset, nearZ);
+ 
+   this->LeftAxis->GetPositionCoordinate()->SetValue(
+-    this->LeftBorderOffset, size[1] - this->CornerOffsetFactor * this->TopBorderOffset, 0.0);
++    this->LeftBorderOffset, size[1] - this->CornerOffsetFactor * this->TopBorderOffset, nearZ);
+   this->LeftAxis->GetPosition2Coordinate()->SetValue(
+-    this->LeftBorderOffset, this->CornerOffsetFactor * this->BottomBorderOffset, 0.0);
++    this->LeftBorderOffset, this->CornerOffsetFactor * this->BottomBorderOffset, nearZ);
+ 
+   if (this->LegendVisibility)
+   {
+     this->BottomAxis->GetPositionCoordinate()->SetValue(
+-      this->CornerOffsetFactor * this->LeftBorderOffset, 2 * this->BottomBorderOffset, 0.0);
++      this->CornerOffsetFactor * this->LeftBorderOffset, 2 * this->BottomBorderOffset, nearZ);
+     this->BottomAxis->GetPosition2Coordinate()->SetValue(
+       size[0] - this->CornerOffsetFactor * this->RightBorderOffset, 2 * this->BottomBorderOffset,
+-      0.0);
++      nearZ);
+   }
+   else
+   {
+     this->BottomAxis->GetPositionCoordinate()->SetValue(
+-      this->CornerOffsetFactor * this->LeftBorderOffset, this->BottomBorderOffset, 0.0);
++      this->CornerOffsetFactor * this->LeftBorderOffset, this->BottomBorderOffset, nearZ);
+     this->BottomAxis->GetPosition2Coordinate()->SetValue(
+-      size[0] - this->CornerOffsetFactor * this->RightBorderOffset, this->BottomBorderOffset, 0.0);
++      size[0] - this->CornerOffsetFactor * this->RightBorderOffset, this->BottomBorderOffset,
++      nearZ);
+   }
+ 
+   if (this->GridVisibility)
+@@ -396,13 +401,13 @@ void vtkLegendScaleActor::BuildRepresentation(vtkViewport* viewport)
+ 
+     // Specify the position of the legend title
+     this->LabelActors[5]->SetPosition(0.5 * size[0], 22);
+-    this->Coordinate->SetValue(0.33333 * size[0], 15, 0.0);
++    this->Coordinate->SetValue(0.33333 * size[0], 15, nearZ);
+     double* x = this->Coordinate->GetComputedWorldValue(viewport);
+     double xL[3];
+     xL[0] = x[0];
+     xL[1] = x[1];
+     xL[2] = x[2];
+-    this->Coordinate->SetValue(0.66667 * size[0], 15, 0.0);
++    this->Coordinate->SetValue(0.66667 * size[0], 15, nearZ);
+     x = this->Coordinate->GetComputedWorldValue(viewport);
+     double xR[3];
+     xR[0] = x[0];
+diff --git a/Rendering/Annotation/vtkRadialGridActor2D.cxx b/Rendering/Annotation/vtkRadialGridActor2D.cxx
+index 6dcbb119..8c049144 100644
+--- a/Rendering/Annotation/vtkRadialGridActor2D.cxx
++++ b/Rendering/Annotation/vtkRadialGridActor2D.cxx
+@@ -7,8 +7,10 @@
+ #include "vtkMath.h"
+ #include "vtkObjectFactory.h"
+ #include "vtkPropCollection.h"
++#include "vtkRenderWindow.h"
+ #include "vtkStringFormatter.h"
+ #include "vtkTextProperty.h"
++#include "vtkViewport.h"
+ 
+ #include <cmath>
+ 
+@@ -122,6 +124,10 @@ void vtkRadialGridActor2D::SetupAxes(vtkViewport* viewport)
+ {
+   this->Axes.clear();
+ 
++  // the axes lie on the near plane, where their world range is measured: at depth 1 when the depth
++  // is reversed (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = vtkRenderWindow::SafeDownCast(viewport->GetVTKWindow());
++  const double nearZ = renWin && renWin->GetUseReverseZ() ? 1.0 : 0.0;
+   for (int index = 0; index < this->NumberOfAxes; index++)
+   {
+     auto axis = vtkSmartPointer<vtkAxisActor2D>::New();
+@@ -140,7 +146,7 @@ void vtkRadialGridActor2D::SetupAxes(vtkViewport* viewport)
+     axis->SetTitleTextProperty(titleProp);
+ 
+     axis->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+-    axis->GetPositionCoordinate()->SetValue(this->Origin[0], this->Origin[1]);
++    axis->GetPositionCoordinate()->SetValue(this->Origin[0], this->Origin[1], nearZ);
+ 
+     axis->GetPosition2Coordinate()->SetCoordinateSystemToViewport();
+     axis->GetPosition2Coordinate()->SetReferenceCoordinate(axis->GetPositionCoordinate());
+@@ -148,7 +154,7 @@ void vtkRadialGridActor2D::SetupAxes(vtkViewport* viewport)
+     double endPosition[2] = { 0, 0 };
+     const double angle = this->GetAxisAngle(index);
+     this->ComputeAxisRelativeEndPosition(index, endPosition);
+-    axis->GetPosition2Coordinate()->SetValue(endPosition[0], endPosition[1]);
++    axis->GetPosition2Coordinate()->SetValue(endPosition[0], endPosition[1], nearZ);
+ 
+     this->UpdateAxisTitle(axis, angle);
+ 
+diff --git a/Rendering/Core/vtkAreaPicker.cxx b/Rendering/Core/vtkAreaPicker.cxx
+index 169a6e6b..54496dee 100644
+--- a/Rendering/Core/vtkAreaPicker.cxx
++++ b/Rendering/Core/vtkAreaPicker.cxx
+@@ -22,6 +22,7 @@
+ #include "vtkProp3DCollection.h"
+ #include "vtkPropCollection.h"
+ #include "vtkProperty.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkVolume.h"
+ 
+@@ -135,37 +136,42 @@ void vtkAreaPicker::DefineFrustum(double x0, double y0, double x1, double y1, vt
+     this->Y1 += 1.0;
+   }
+ 
+-  // compute world coordinates of the pick volume
++  // compute world coordinates of the pick volume, its near corners first: the near plane is at
++  // display z 1 and the far one at 0 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++  vtkRenderWindow* renWin = renderer->GetRenderWindow();
++  const bool reverseZ = renWin && renWin->GetUseReverseZ();
++  const double nearZ = reverseZ ? 1.0 : 0.0;
++  const double farZ = reverseZ ? 0.0 : 1.0;
+   double verts[32];
+-  renderer->SetDisplayPoint(this->X0, this->Y0, 0);
++  renderer->SetDisplayPoint(this->X0, this->Y0, nearZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[0]);
+ 
+-  renderer->SetDisplayPoint(this->X0, this->Y0, 1);
++  renderer->SetDisplayPoint(this->X0, this->Y0, farZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[4]);
+ 
+-  renderer->SetDisplayPoint(this->X0, this->Y1, 0);
++  renderer->SetDisplayPoint(this->X0, this->Y1, nearZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[8]);
+ 
+-  renderer->SetDisplayPoint(this->X0, this->Y1, 1);
++  renderer->SetDisplayPoint(this->X0, this->Y1, farZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[12]);
+ 
+-  renderer->SetDisplayPoint(this->X1, this->Y0, 0);
++  renderer->SetDisplayPoint(this->X1, this->Y0, nearZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[16]);
+ 
+-  renderer->SetDisplayPoint(this->X1, this->Y0, 1);
++  renderer->SetDisplayPoint(this->X1, this->Y0, farZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[20]);
+ 
+-  renderer->SetDisplayPoint(this->X1, this->Y1, 0);
++  renderer->SetDisplayPoint(this->X1, this->Y1, nearZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[24]);
+ 
+-  renderer->SetDisplayPoint(this->X1, this->Y1, 1);
++  renderer->SetDisplayPoint(this->X1, this->Y1, farZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(&verts[28]);
+ 
+diff --git a/Rendering/Core/vtkHardwarePicker.cxx b/Rendering/Core/vtkHardwarePicker.cxx
+index e3864c7d..b01583e6 100644
+--- a/Rendering/Core/vtkHardwarePicker.cxx
++++ b/Rendering/Core/vtkHardwarePicker.cxx
+@@ -27,6 +27,7 @@
+ #include "vtkPolygon.h"
+ #include "vtkPropCollection.h"
+ #include "vtkProperty.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ #include "vtkSelection.h"
+ #include "vtkSelectionNode.h"
+@@ -490,9 +491,12 @@ int vtkHardwarePicker::Pick(
+         }
+       }
+ 
+-      // define ray points in display coordinates
+-      double nearDisplayPoint[3] = { selectionX, selectionY, 0.0 };
+-      double farDisplayPoint[3] = { selectionX, selectionY, 1.0 };
++      // define ray points in display coordinates: the near plane is at display z 1 and the far
++      // one at 0 when the depth is reversed (vtkRenderWindow::UseReverseZ)
++      vtkRenderWindow* renWin = renderer->GetRenderWindow();
++      const bool reverseZ = renWin && renWin->GetUseReverseZ();
++      double nearDisplayPoint[3] = { selectionX, selectionY, reverseZ ? 1.0 : 0.0 };
++      double farDisplayPoint[3] = { selectionX, selectionY, reverseZ ? 0.0 : 1.0 };
+ 
+       // compute near ray point in world coordinates
+       this->Renderer->SetDisplayPoint(nearDisplayPoint);
+diff --git a/Rendering/Core/vtkHardwareSelector.cxx b/Rendering/Core/vtkHardwareSelector.cxx
+index 2ace7a8b..ccb52123 100644
+--- a/Rendering/Core/vtkHardwareSelector.cxx
++++ b/Rendering/Core/vtkHardwareSelector.cxx
+@@ -538,6 +538,11 @@ void vtkHardwareSelector::BuildPropHitList(unsigned char* pixelbuffer)
+       this->Area[0], this->Area[1], this->Area[2], this->Area[3]);
+   }
+ 
++  // a prop's z value is its nearest depth: the greatest in reversed depth, whose far plane is 0
++  // (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ = this->Renderer && this->Renderer->GetRenderWindow() &&
++    this->Renderer->GetRenderWindow()->GetUseReverseZ();
++
+   unsigned int offset = 0;
+   for (int yy = 0; yy <= static_cast<int>(this->Area[3] - this->Area[1]); yy++)
+   {
+@@ -550,12 +555,14 @@ void vtkHardwareSelector::BuildPropHitList(unsigned char* pixelbuffer)
+         if (this->Internals->HitProps.find(val) == this->Internals->HitProps.end())
+         {
+           this->Internals->HitProps.insert(val);
+-          this->Internals->ZValues[val] = 1.0;
++          this->Internals->ZValues[val] = reverseZ ? 0.0 : 1.0;
+         }
+         if (depthBuffer)
+         {
+-          this->Internals->ZValues[val] = std::min<std::map<int, double>::mapped_type>(
+-            depthBuffer[offset], this->Internals->ZValues[val]);
++          using ZType = std::map<int, double>::mapped_type;
++          this->Internals->ZValues[val] = reverseZ
++            ? std::max<ZType>(depthBuffer[offset], this->Internals->ZValues[val])
++            : std::min<ZType>(depthBuffer[offset], this->Internals->ZValues[val]);
+         }
+         this->Internals->PropPixels[val].push_back(offset * 3);
+       }
+@@ -573,7 +580,10 @@ double vtkHardwareSelector::GetZValue(int val)
+   {
+     return zitr->second;
+   }
+-  return 1.0;
++  // the far plane: 0 in reversed depth (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ = this->Renderer && this->Renderer->GetRenderWindow() &&
++    this->Renderer->GetRenderWindow()->GetUseReverseZ();
++  return reverseZ ? 0.0 : 1.0;
+ }
+ 
+ //------------------------------------------------------------------------------
+diff --git a/Rendering/Core/vtkPicker.cxx b/Rendering/Core/vtkPicker.cxx
+index 52f98f0b..787310cb 100644
+--- a/Rendering/Core/vtkPicker.cxx
++++ b/Rendering/Core/vtkPicker.cxx
+@@ -138,6 +138,9 @@ int vtkPicker::Pick3DPoint(VTK_FUTURE_CONST double pos[3], vtkRenderer* renderer
+   //
+   int winSize[2] = { 1, 1 };
+   const double* viewport = renderer->GetViewport();
++  // the window's diagonal on the near plane, at display z 1 when the depth is reversed
++  // (vtkRenderWindow::UseReverseZ)
++  double nearZ = 0.0;
+   if (renderer->GetRenderWindow())
+   {
+     const int* winSizePtr = renderer->GetRenderWindow()->GetSize();
+@@ -146,16 +149,17 @@ int vtkPicker::Pick3DPoint(VTK_FUTURE_CONST double pos[3], vtkRenderer* renderer
+       winSize[0] = winSizePtr[0];
+       winSize[1] = winSizePtr[1];
+     }
++    nearZ = renderer->GetRenderWindow()->GetUseReverseZ() ? 1.0 : 0.0;
+   }
+   double x = winSize[0] * viewport[0];
+   double y = winSize[1] * viewport[1];
+-  renderer->SetDisplayPoint(x, y, 0.0);
++  renderer->SetDisplayPoint(x, y, nearZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(windowLowerLeft);
+ 
+   x = winSize[0] * viewport[2];
+   y = winSize[1] * viewport[3];
+-  renderer->SetDisplayPoint(x, y, 0.0);
++  renderer->SetDisplayPoint(x, y, nearZ);
+   renderer->DisplayToWorld();
+   renderer->GetWorldPoint(windowUpperRight);
+ 
+diff --git a/Rendering/Core/vtkRenderWindow.h b/Rendering/Core/vtkRenderWindow.h
+index 6e804750..fe86e71a 100644
+--- a/Rendering/Core/vtkRenderWindow.h
++++ b/Rendering/Core/vtkRenderWindow.h
+@@ -696,10 +696,10 @@ public:
+    * do their conversions between display and world coordinates: a depth read from the window goes
+    * back to its world point as before. An OpenGL window needs OpenGL 4.5 or ARB_clip_control, and
+    * turns it off with a warning without them; changing it makes the window's framebuffers again,
+-   * their depth in floats, which a blit of it into another framebuffer needs there too. Mappers
+-   * that compute their fragments' depth themselves (points as spheres, lines as tubes, the sphere
+-   * and stick mappers) and the depth peeling, order independent translucency, SSAO and EDL passes
+-   * assume the conventional depth. Default is off.
++   * their depth in floats, which a blit of it into another framebuffer needs there too. The
++   * mappers and passes that compute, test or read depth themselves follow as well. Display and
++   * view z run from 1 at the near plane to 0 at the far one, so the background's depth read from
++   * the window (GetZbufferData, vtkRenderer::GetZ) is 0. Default is off.
+    */
+   vtkGetMacro(UseReverseZ, bool);
+   vtkSetMacro(UseReverseZ, bool);
+diff --git a/Rendering/Core/vtkRenderer.cxx b/Rendering/Core/vtkRenderer.cxx
+index c92e2d0f..9ef3e403 100644
+--- a/Rendering/Core/vtkRenderer.cxx
++++ b/Rendering/Core/vtkRenderer.cxx
+@@ -1456,10 +1456,14 @@ void vtkRenderer::SetRenderWindow(vtkRenderWindow* renwin)
+ // Given a pixel location, return the Z value
+ double vtkRenderer::GetZ(int x, int y)
+ {
++  // the far plane, where nothing was drawn: 0 in reversed depth (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ = this->RenderWindow->GetUseReverseZ();
++  const double farZ = reverseZ ? 0.0 : 1.0;
++
+   int* size = this->RenderWindow->GetSize();
+   if (x < 0 || y < 0 || x >= size[0] || y >= size[1])
+   {
+-    return 1.0; // outside of render window
++    return farZ; // outside of render window
+   }
+ 
+   if (!this->SafeGetZ)
+@@ -1495,22 +1499,22 @@ double vtkRenderer::GetZ(int x, int y)
+   // Reset pick list
+   this->PickFromProps = nullptr;
+ 
+-  // find the closest z-buffer value
++  // find the closest z-buffer value, the greatest in reversed depth
+   if (sel && sel->GetNode(0))
+   {
+-    double closestDepth = 1.0;
++    double closestDepth = farZ;
+     unsigned int numPicked = sel->GetNumberOfNodes();
+     for (unsigned int pIdx = 0; pIdx < numPicked; pIdx++)
+     {
+       vtkSelectionNode* selnode = sel->GetNode(pIdx);
+       double adepth = selnode->GetProperties()->Get(vtkSelectionNode::ZBUFFER_VALUE());
+-      closestDepth = std::min(adepth, closestDepth);
++      closestDepth = reverseZ ? std::max(adepth, closestDepth) : std::min(adepth, closestDepth);
+     }
+ 
+     return closestDepth;
+   }
+ 
+-  return 1.0; // nothing selected
++  return farZ; // nothing selected
+ }
+ 
+ // Convert view point coordinates to world coordinates.
+@@ -1939,8 +1943,10 @@ vtkAssemblyPath* vtkRenderer::PickProp(double selectionX1, double selectionY1, d
+   {
+     // find the node with the closest zvalue and
+     // store the list of picked props
++    // the nearest is the greatest in reversed depth (vtkRenderWindow::UseReverseZ)
++    const bool reverseZ = this->RenderWindow && this->RenderWindow->GetUseReverseZ();
+     vtkProp* closestProp = nullptr;
+-    double closestDepth = 2.0;
++    double closestDepth = reverseZ ? -1.0 : 2.0;
+     unsigned int closestIdx = 0;
+     this->PickResultProps = vtkPropCollection::New();
+     unsigned int numPicked = sel->GetNumberOfNodes();
+@@ -1953,7 +1959,7 @@ vtkAssemblyPath* vtkRenderer::PickProp(double selectionX1, double selectionY1, d
+       {
+         this->PickResultProps->AddItem(aProp);
+         double adepth = selnode->GetProperties()->Get(vtkSelectionNode::ZBUFFER_VALUE());
+-        if (adepth < closestDepth)
++        if (reverseZ ? adepth > closestDepth : adepth < closestDepth)
+         {
+           closestProp = aProp;
+           closestDepth = adepth;
+diff --git a/Rendering/Core/vtkRendererSource.cxx b/Rendering/Core/vtkRendererSource.cxx
+index ef36b02a..e36570c3 100644
+--- a/Rendering/Core/vtkRendererSource.cxx
++++ b/Rendering/Core/vtkRendererSource.cxx
+@@ -160,12 +160,15 @@ void vtkRendererSource::RequestData(
+     // If RGBZ is requested, intermix RGB with shift/scaled Z
+     if (this->DepthValuesInScalars)
+     {
++      // the farthest depth becomes 0 and the nearest 255; the farthest is the least when the depth
++      // is reversed (vtkRenderWindow::UseReverseZ)
++      const bool reverseZ = renWin->GetUseReverseZ();
+       float *zptr = zBuf, *zptr_end = zBuf + numOutPts;
+       float min = *zBuf, max = *zBuf;
+       while (zptr < zptr_end)
+       {
+-        min = std::max(min, *zptr);
+-        max = std::min(max, *zptr);
++        min = reverseZ ? std::min(min, *zptr) : std::max(min, *zptr);
++        max = reverseZ ? std::max(max, *zptr) : std::min(max, *zptr);
+         zptr++;
+       }
+       float scale = 255.0 / (max - min);
+diff --git a/Rendering/Core/vtkSelectVisiblePoints.cxx b/Rendering/Core/vtkSelectVisiblePoints.cxx
+index 6d854aae..aec2f6e3 100644
+--- a/Rendering/Core/vtkSelectVisiblePoints.cxx
++++ b/Rendering/Core/vtkSelectVisiblePoints.cxx
+@@ -207,10 +207,12 @@ float* vtkSelectVisiblePoints::Initialize(bool getZbuff)
+   // each point to view coordinates.  vtkRenderer provides a WorldToView()
+   // method but it computes the composite perspective transform each time
+   // WorldToView() is called.  This is expensive, so we get the matrix once
+-  // and handle the transformation ourselves.
++  // and handle the transformation ourselves. Its depth is the window's: from 1 at the near plane
++  // to 0 at the far one when reversed (vtkRenderWindow::UseReverseZ).
++  const bool reverseZ = this->Renderer->GetRenderWindow()->GetUseReverseZ();
+   this->CompositePerspectiveTransform->DeepCopy(
+     this->Renderer->GetActiveCamera()->GetCompositeProjectionTransformMatrix(
+-      this->Renderer->GetTiledAspectRatio(), 0, 1));
++      this->Renderer->GetTiledAspectRatio(), reverseZ ? 1 : 0, reverseZ ? 0 : 1));
+ 
+   // If we have more than a few query points, we grab the z-buffer for the
+   // selection region all at once and probe the resulting array.  When we
+@@ -262,7 +264,11 @@ bool vtkSelectVisiblePoints::IsPointOccluded(const double x[3], const float* zPt
+       z = this->Renderer->GetZ(static_cast<int>(dx[0]), static_cast<int>(dx[1]));
+     }
+ 
+-    if (dx[2] < (z + this->Tolerance))
++    // in front of the z-buffer, or within the tolerance behind it: nearer is greater in reversed
++    // depth (vtkRenderWindow::UseReverseZ)
++    vtkRenderWindow* renWin = this->Renderer->GetRenderWindow();
++    const bool reverseZ = renWin && renWin->GetUseReverseZ();
++    if (reverseZ ? dx[2] > (z - this->Tolerance) : dx[2] < (z + this->Tolerance))
+     {
+       return true;
+     }
+diff --git a/Rendering/Core/vtkWorldPointPicker.cxx b/Rendering/Core/vtkWorldPointPicker.cxx
+index 92b32306..fd222e85 100644
+--- a/Rendering/Core/vtkWorldPointPicker.cxx
++++ b/Rendering/Core/vtkWorldPointPicker.cxx
+@@ -5,6 +5,7 @@
+ #include "vtkCamera.h"
+ #include "vtkCommand.h"
+ #include "vtkObjectFactory.h"
++#include "vtkRenderWindow.h"
+ #include "vtkRenderer.h"
+ 
+ VTK_ABI_NAMESPACE_BEGIN
+@@ -39,8 +40,11 @@ int vtkWorldPointPicker::Pick(
+   // screen that has not been rendered into. Use the camera's focal
+   // point for the z value. The test value .999999 has to be used
+   // instead of 1.0 because for some reason our SGI Infinite Reality
+-  // engine won't return a 1.0 from the zbuffer
+-  if (z < 0.999999)
++  // engine won't return a 1.0 from the zbuffer. Reversed depth (vtkRenderWindow::UseReverseZ) is
++  // cleared to exactly 0 at the far plane, and a float depth just above it is drawn geometry.
++  vtkRenderWindow* renWin = renderer->GetRenderWindow();
++  const bool reverseZ = renWin && renWin->GetUseReverseZ();
++  if (reverseZ ? z > 0.0 : z < 0.999999)
+   {
+     selectionZ = z;
+     vtkDebugMacro(<< " z from zBuffer: " << selectionZ);
+diff --git a/Rendering/OpenGL2/Private/vtkOpenGLBatchedLabeledDataMapperInternals.cxx b/Rendering/OpenGL2/Private/vtkOpenGLBatchedLabeledDataMapperInternals.cxx
+index 1e99c281..b87ceba9 100644
+--- a/Rendering/OpenGL2/Private/vtkOpenGLBatchedLabeledDataMapperInternals.cxx
++++ b/Rendering/OpenGL2/Private/vtkOpenGLBatchedLabeledDataMapperInternals.cxx
+@@ -28,7 +28,7 @@ vtkStandardNewMacro(vtkOpenGLBatchedLabeledDataMapperInternals);
+ // into up to 3 triangle-strip quads (glyph / background / frame). WebGPU cannot
+ // use geometry shaders; it achieves the same expansion with instanced rendering
+ // (18 vertices per instance: 3 layers × 6 vertices) driven by the vertex shader.
+-static void MakeupShaders(vtkOpenGLShaderProperty* sp)
++static void MakeupShaders(vtkOpenGLShaderProperty* sp, bool reverseZ)
+ {
+   const std::string smaxprops = vtk::to_string(vtkBatchedLabeledDataMapper::MaxTextProperties);
+   const std::string spadsz = vtk::to_string(vtkBatchedLabeledDataMapper::GlyphAtlasPadding);
+@@ -269,16 +269,28 @@ static void MakeupShaders(vtkOpenGLShaderProperty* sp)
+     vtkShader::Fragment, "//VTK::Normal::Impl", true, "//NO NORMAL IMPL", false);
+   sp->AddShaderReplacement(vtkShader::Fragment, "//VTK::Coincident::Dec", true,
+     "float cscale = length(vec2(dFdx(gl_FragCoord.z),dFdy(gl_FragCoord.z)));\n", false);
++  // reversed depth (vtkRenderWindow::UseReverseZ) is the greater the nearer, in floats: the
++  // background and the frame go behind the glyphs the other way, a unit of the constant one part
++  // of the fragment's own depth, as it is of the depth range in a fixed-point buffer
+   sp->AddShaderReplacement(vtkShader::Fragment, "//VTK::Depth::Impl", true,
+-    "if (layer == 0) {\n"
+-    "  gl_FragDepth = gl_FragCoord.z;\n"
+-    "}\n"
+-    "if (layer == 1) {\n"
+-    "  gl_FragDepth = gl_FragCoord.z + 2*cscale + 0.000016*2.0;\n"
+-    "}\n"
+-    "if (layer == 2) {\n"
+-    "  gl_FragDepth = gl_FragCoord.z + 2*cscale + 0.000016*4.0;\n"
+-    "}\n",
++    reverseZ ? "if (layer == 0) {\n"
++               "  gl_FragDepth = gl_FragCoord.z;\n"
++               "}\n"
++               "if (layer == 1) {\n"
++               "  gl_FragDepth = gl_FragCoord.z - 2.0*cscale - 0.000016*2.0*gl_FragCoord.z;\n"
++               "}\n"
++               "if (layer == 2) {\n"
++               "  gl_FragDepth = gl_FragCoord.z - 2.0*cscale - 0.000016*4.0*gl_FragCoord.z;\n"
++               "}\n"
++             : "if (layer == 0) {\n"
++               "  gl_FragDepth = gl_FragCoord.z;\n"
++               "}\n"
++               "if (layer == 1) {\n"
++               "  gl_FragDepth = gl_FragCoord.z + 2*cscale + 0.000016*2.0;\n"
++               "}\n"
++               "if (layer == 2) {\n"
++               "  gl_FragDepth = gl_FragCoord.z + 2*cscale + 0.000016*4.0;\n"
++               "}\n",
+     false);
+   sp->AddShaderReplacement(vtkShader::Fragment, "//VTK::Light::Dec", true,
+     std::string("uniform vec4 BackgroundColors[") + smaxprops +
+@@ -312,7 +324,7 @@ void vtkOpenGLBatchedLabeledDataMapperInternals::BuildShaders(
+   auto* sp = vtkOpenGLShaderProperty::SafeDownCast(actor->GetShaderProperty());
+   if (sp)
+   {
+-    MakeupShaders(sp);
++    MakeupShaders(sp, ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ());
+   }
+   this->Superclass::BuildShaders(shaders, ren, actor);
+ }
+diff --git a/Rendering/OpenGL2/glsl/vtkDepthOfFieldPassFS.glsl b/Rendering/OpenGL2/glsl/vtkDepthOfFieldPassFS.glsl
+index 2273c578..23059cc8 100644
+--- a/Rendering/OpenGL2/glsl/vtkDepthOfFieldPassFS.glsl
++++ b/Rendering/OpenGL2/glsl/vtkDepthOfFieldPassFS.glsl
+@@ -13,10 +13,19 @@ uniform float nearC;
+ uniform float farC;
+ uniform float focalDisk;
+ uniform float focalDistance;
++// whether the depth runs from 1 at the near plane to 0 at the far one
++// (vtkRenderWindow::UseReverseZ); the formulas below take the conventional one
++uniform int reverseZ;
+ 
+ // the output of this shader
+ //VTK::Output::Dec
+ 
++float conventionalDepth(vec2 tc)
++{
++  float d = texture2D(depth, tc).r;
++  return reverseZ != 0 ? 1.0 - d : d;
++}
++
+ vec2 rand2(vec2 co)
+ {
+   float a = 12.9898;
+@@ -39,13 +48,13 @@ void main(void)
+   // use automatic focalDistance?  when focalDistance = 0
+   if (fdist == 0.0)
+     {
+-    fdist = -farC * nearC / (texture2D(depth,vec2(0.5,0.5)).r * (farC - nearC) - farC);
++    fdist = -farC * nearC / (conventionalDepth(vec2(0.5,0.5)) * (farC - nearC) - farC);
+     }
+ 
+   float CoCScale = focalDisk*fdist*(farC - nearC)/(farC*nearC);
+   float CoCBias = focalDisk*(nearC - fdist)/nearC;
+ 
+-  float cdepth = texture2D(depth,tcoordVC).r;
++  float cdepth = conventionalDepth(tcoordVC);
+   float CoC = CoCScale*cdepth + CoCBias;
+ 
+   // loop over pixels
+@@ -55,7 +64,7 @@ void main(void)
+       {
+       vec2 newOffset = pixelToTCoord*(vec2(i-4,j-4)*2.0 + rand2(tcoordVC));
+       vec2 newtc = tcoordVC + newOffset;
+-      float tdepth = texture2D(depth,newtc).r;
++      float tdepth = conventionalDepth(newtc);
+       float tCoC = CoCScale*tdepth + CoCBias;
+       // is the sample in range?
+       float close = abs(tCoC) - length(newOffset/worldToTCoord);
+diff --git a/Rendering/OpenGL2/glsl/vtkEDLShadeFS.glsl b/Rendering/OpenGL2/glsl/vtkEDLShadeFS.glsl
+index 5325bdb9..2c13163c 100644
+--- a/Rendering/OpenGL2/glsl/vtkEDLShadeFS.glsl
++++ b/Rendering/OpenGL2/glsl/vtkEDLShadeFS.glsl
+@@ -44,6 +44,8 @@ uniform float        SY;      //- pixel vertical step (image distance: 1/h)
+ uniform float        Znear;     // near clipping plane
+ uniform float        Zfar;      // far clipping plane
+ uniform float        SceneSize; // typical scene size, to scale the depth by.
++uniform int          ReverseZ;  // whether the depth runs from 1 at the near plane to 0 at the far
++                                // one (vtkRenderWindow::UseReverseZ)
+ 
+ uniform vec3         L;         // [0.,0.,-1.] - Light direction [frontal]
+ /**************************************************/
+@@ -109,6 +111,10 @@ float zscale(float z)
+ float ztransform(float z)
+ {
+   float Z;
++  if (ReverseZ != 0)
++  {
++    z = 1. - z; // the conventional depth
++  }
+   Z = (z-0.5)*2.;
+   Z = -2.*Zfar*Znear/( (Zfar-Znear) * (Z-(Zfar+Znear)/(Zfar-Znear)) );
+   Z = (Z-Znear)/SceneSize;
+diff --git a/Rendering/OpenGL2/glsl/vtkFluidMapperFS.glsl b/Rendering/OpenGL2/glsl/vtkFluidMapperFS.glsl
+index 873224a0..2d7e6c28 100644
+--- a/Rendering/OpenGL2/glsl/vtkFluidMapperFS.glsl
++++ b/Rendering/OpenGL2/glsl/vtkFluidMapperFS.glsl
+@@ -18,6 +18,9 @@ in vec3 colorVCGSOutput;
+ uniform mat4 VCDCMatrix;
+ uniform mat4 MCVCMatrix;
+ uniform int  cameraParallel;
++// whether the depth runs from 1 at the near plane to 0 at the far one
++// (vtkRenderWindow::UseReverseZ): NDC z itself, nearer is greater
++uniform int  reverseZ;
+ 
+ uniform int outputEyeZ = 1;
+ 
+@@ -98,14 +101,14 @@ void main()
+     // compute the pixel's depth
+     // " normalVCVSOutput = vec3(0,0,1);
+     vec4 pos = VCDCMatrix * vertexVC;
+-    gl_FragDepth = (pos.z / pos.w + 1.0) / 2.0;
++    gl_FragDepth = reverseZ != 0 ? pos.z / pos.w : (pos.z / pos.w + 1.0) / 2.0;
+ 
+     //VTK::Clip::Impl
+ 
+     //VTK::Color::Impl
+ 
+     float odepth = texelFetch(opaqueZTexture, ivec2(int(gl_FragCoord.x + 0.5), int(gl_FragCoord.y + 0.5)), 0).r;
+-    if(gl_FragDepth >= odepth)
++    if(reverseZ != 0 ? gl_FragDepth <= odepth : gl_FragDepth >= odepth)
+     {
+       discard;
+     }
+diff --git a/Rendering/OpenGL2/glsl/vtkFluidMapperFinalFS.glsl b/Rendering/OpenGL2/glsl/vtkFluidMapperFinalFS.glsl
+index 49d54e16..94ccada0 100644
+--- a/Rendering/OpenGL2/glsl/vtkFluidMapperFinalFS.glsl
++++ b/Rendering/OpenGL2/glsl/vtkFluidMapperFinalFS.glsl
+@@ -37,6 +37,9 @@ uniform vec3 fluidOpaqueColor       = vec3(0.4, 0.4, 0.95);
+ uniform vec3 fluidAttenuationColor;
+ 
+ uniform float farZValue;
++// whether the depth runs from 1 at the near plane to 0 at the far one
++// (vtkRenderWindow::UseReverseZ)
++uniform int reverseZ;
+ 
+ // Texture maps
+ //VTK::TMap::Dec
+@@ -82,7 +85,9 @@ void main()
+   float fdepth = texture(fluidZTexture, texCoord).r;
+   if (fdepth <= farZValue || fdepth >= 0) { discard; }
+ 
+-  gl_FragDepth = fdepth;
++  // fdepth is the (negative) eye z: the depth written is clamped to the near plane's, 0, or 1
++  // when reversed
++  gl_FragDepth = reverseZ != 0 ? 1.0 : fdepth;
+   vec3  N      = texture(fluidNormalTexture, texCoord).xyz;
+   if(displayModeSurfaceNormal == 1)
+   {
+diff --git a/Rendering/OpenGL2/glsl/vtkPointFillPassFS.glsl b/Rendering/OpenGL2/glsl/vtkPointFillPassFS.glsl
+index d3961820..f735483c 100644
+--- a/Rendering/OpenGL2/glsl/vtkPointFillPassFS.glsl
++++ b/Rendering/OpenGL2/glsl/vtkPointFillPassFS.glsl
+@@ -11,14 +11,23 @@ uniform float farC;
+ uniform float MinimumCandidateAngle;
+ uniform float CandidatePointRatio;
+ uniform vec2  pixelToTCoord;
++// whether the depth runs from 1 at the near plane to 0 at the far one
++// (vtkRenderWindow::UseReverseZ); the formulas below take the conventional one
++uniform int   reverseZ;
+ 
+ // the output of this shader
+ //VTK::Output::Dec
+ 
++// the conventional depth of the window's, and back: its own inverse
++float conventionalDepth(float d)
++{
++  return reverseZ != 0 ? 1.0 - d : d;
++}
++
+ void main(void)
+ {
+   // original pixel
+-  float fbdepth = texture2D(depth,texCoord).r;
++  float fbdepth = conventionalDepth(texture2D(depth,texCoord).r);
+   fbdepth = 2.0*nearC/(farC + nearC -fbdepth*(farC - nearC));
+   vec4  fbcolor = texture2D(source,texCoord);
+ 
+@@ -42,7 +51,7 @@ void main(void)
+     for (int j = -3; j <= 3; j++)
+       {
+       float adepth = texture2D(depth,texCoord + pixelToTCoord*vec2(i,j)).r;
+-      float mdepth = 2.0*nearC/(farC + nearC -adepth*(farC - nearC));
++      float mdepth = 2.0*nearC/(farC + nearC -conventionalDepth(adepth)*(farC - nearC));
+       if (mdepth < fbdepth*CandidatePointRatio && (i != 0 || j != 0))
+         {
+         float theta = atan(float(j),float(i));
+@@ -74,6 +83,6 @@ if (min(maxTheta-minTheta, maxTheta2-minTheta2) > MinimumCandidateAngle)
+ else
+   {
+   gl_FragData[0] = fbcolor;
+-  gl_FragDepth = fbdepth;
++  gl_FragDepth = conventionalDepth(fbdepth);
+   }
+ }
+diff --git a/Rendering/OpenGL2/vtkClearZPass.cxx b/Rendering/OpenGL2/vtkClearZPass.cxx
+index 9401041a..92c02eab 100644
+--- a/Rendering/OpenGL2/vtkClearZPass.cxx
++++ b/Rendering/OpenGL2/vtkClearZPass.cxx
+@@ -6,6 +6,7 @@
+ #include "vtkOpenGLRenderer.h"
+ #include "vtkOpenGLState.h"
+ #include "vtkRenderState.h"
++#include "vtkRenderWindow.h"
+ #include "vtk_glad.h"
+ #include <cassert>
+ 
+@@ -41,7 +42,10 @@ void vtkClearZPass::Render(const vtkRenderState* s)
+ 
+   vtkOpenGLState* ostate = static_cast<vtkOpenGLRenderer*>(s->GetRenderer())->GetState();
+   ostate->vtkglDepthMask(GL_TRUE);
+-  ostate->vtkglClearDepth(this->Depth);
++  // Depth is conventional, 0 at the near plane and 1 at the far one: reversed depth
++  // (vtkRenderWindow::UseReverseZ) runs from 1 to 0
++  vtkRenderWindow* renWin = s->GetRenderer()->GetRenderWindow();
++  ostate->vtkglClearDepth(renWin && renWin->GetUseReverseZ() ? 1.0 - this->Depth : this->Depth);
+   ostate->vtkglClear(GL_DEPTH_BUFFER_BIT);
+ }
+ VTK_ABI_NAMESPACE_END
+diff --git a/Rendering/OpenGL2/vtkClearZPass.h b/Rendering/OpenGL2/vtkClearZPass.h
+index 8a334c02..243b518b 100644
+--- a/Rendering/OpenGL2/vtkClearZPass.h
++++ b/Rendering/OpenGL2/vtkClearZPass.h
+@@ -35,7 +35,8 @@ public:
+ 
+   ///@{
+   /**
+-   * Set/Get the depth value. Initial value is 1.0 (farthest).
++   * Set/Get the depth value. Initial value is 1.0 (farthest). The value is conventional, 0 at the
++   * near plane: a window with reversed depth (vtkRenderWindow::UseReverseZ) clears to 1 - value.
+    */
+   vtkSetClampMacro(Depth, double, 0.0, 1.0);
+   vtkGetMacro(Depth, double);
+diff --git a/Rendering/OpenGL2/vtkDepthOfFieldPass.cxx b/Rendering/OpenGL2/vtkDepthOfFieldPass.cxx
+index 3c44de57..7a70e097 100644
+--- a/Rendering/OpenGL2/vtkDepthOfFieldPass.cxx
++++ b/Rendering/OpenGL2/vtkDepthOfFieldPass.cxx
+@@ -207,6 +207,7 @@ void vtkDepthOfFieldPass::Render(const vtkRenderState* s)
+   this->BlurProgram->Program->SetUniformf("nearC", frange[0]);
+   this->BlurProgram->Program->SetUniformf("farC", frange[1]);
+   this->BlurProgram->Program->SetUniformf("focalDisk", focalDisk);
++  this->BlurProgram->Program->SetUniformi("reverseZ", renWin->GetUseReverseZ() ? 1 : 0);
+ 
+   if (this->AutomaticFocalDistance)
+   {
+diff --git a/Rendering/OpenGL2/vtkDepthPeelingPass.cxx b/Rendering/OpenGL2/vtkDepthPeelingPass.cxx
+index 5cf6f745..c0c18ca8 100644
+--- a/Rendering/OpenGL2/vtkDepthPeelingPass.cxx
++++ b/Rendering/OpenGL2/vtkDepthPeelingPass.cxx
+@@ -301,7 +301,7 @@ void vtkDepthPeelingPass::BlendFinalPeel(vtkOpenGLRenderWindow* renWin)
+     // do we need to set the viewport
+     this->FinalBlend->Render();
+   }
+-  this->State->vtkglDepthFunc(GL_LEQUAL);
++  this->State->vtkglDepthFunc(renWin->GetUseReverseZ() ? GL_GEQUAL : GL_LEQUAL);
+ }
+ 
+ //------------------------------------------------------------------------------
+@@ -338,6 +338,10 @@ void vtkDepthPeelingPass::Render(const vtkRenderState* s)
+     vtkOpenGLRenderWindow::SafeDownCast(s->GetRenderer()->GetRenderWindow());
+   this->State = renWin->GetState();
+ 
++  // reversed depth (vtkRenderWindow::UseReverseZ) is the greater the nearer: the depth tests and
++  // the clears turn round
++  const bool reverseZ = renWin->GetUseReverseZ();
++
+   // we need alpha planes
+   int rgba[4];
+   renWin->GetColorBufferSizes(rgba);
+@@ -431,12 +435,12 @@ void vtkDepthPeelingPass::Render(const vtkRenderState* s)
+   bool saveScissorTestState = this->State->GetEnumState(GL_SCISSOR_TEST);
+   this->State->vtkglDisable(GL_SCISSOR_TEST);
+ 
+-  this->State->vtkglClearDepth(static_cast<GLclampf>(0.0));
++  this->State->vtkglClearDepth(static_cast<GLclampf>(reverseZ ? 1.0 : 0.0));
+   this->State->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+ 
+   this->State->vtkglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+   this->State->vtkglClearColor(0.0, 0.0, 0.0, 0.0); // always clear to black
+-  this->State->vtkglClearDepth(static_cast<GLclampf>(1.0));
++  this->State->vtkglClearDepth(static_cast<GLclampf>(reverseZ ? 0.0 : 1.0));
+   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+ 
+   this->Framebuffer->AddDepthAttachment(this->TranslucentZTexture[1]);
+@@ -490,7 +494,7 @@ void vtkDepthPeelingPass::Render(const vtkRenderState* s)
+   GLuint nbPixels = threshold + 1;
+   this->PeelCount = 0;
+   this->ColorDrawCount = 0;
+-  this->State->vtkglDepthFunc(GL_LEQUAL);
++  this->State->vtkglDepthFunc(reverseZ ? GL_GEQUAL : GL_LEQUAL);
+   while (!done)
+   {
+     this->State->vtkglDepthMask(GL_TRUE);
+@@ -521,7 +525,7 @@ void vtkDepthPeelingPass::Render(const vtkRenderState* s)
+       this->State->vtkglDepthFunc(GL_ALWAYS);
+     }
+     this->TranslucentPass->Render(s);
+-    this->State->vtkglDepthFunc(GL_LEQUAL);
++    this->State->vtkglDepthFunc(reverseZ ? GL_GEQUAL : GL_LEQUAL);
+     this->State->vtkglDisable(GL_BLEND);
+ 
+ #ifndef GL_ES_VERSION_3_0
+@@ -638,6 +642,7 @@ bool vtkDepthPeelingPass::PostReplaceShaderValues(
+ {
+   vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::Dec",
+     "uniform vec2 vpSize;\n"
++    "uniform int dpReverseZ;\n"
+     "uniform sampler2D opaqueZTexture;\n"
+     "uniform sampler2D translucentZTexture;\n");
+ 
+@@ -657,13 +662,23 @@ bool vtkDepthPeelingPass::PostReplaceShaderValues(
+   // counting/accumulating pixels of the same surface twice
+   // simply due to this randomness in z values. So we introduce
+   // an epsilon into the transparent test to require some
+-  // minimal z separation between pixels
++  // minimal z separation between pixels.
++  // Reversed depth (vtkRenderWindow::UseReverseZ, dpReverseZ) is the greater the nearer, in
++  // floats: the tests turn round, the epsilon relative to the depth, as floats resolve it.
+   vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::Impl",
+     "vec2 dpTexCoord = gl_FragCoord.xy / vpSize;\n"
+     "  float odepth = texture2D(opaqueZTexture, dpTexCoord).r;\n"
+-    "  if (gl_FragDepth >= odepth) { discard; }\n"
+     "  float tdepth = texture2D(translucentZTexture, dpTexCoord).r;\n"
+-    "  if (gl_FragDepth <= tdepth + .0000001) { discard; }\n");
++    "  if (dpReverseZ == 0)\n"
++    "  {\n"
++    "    if (gl_FragDepth >= odepth) { discard; }\n"
++    "    if (gl_FragDepth <= tdepth + .0000001) { discard; }\n"
++    "  }\n"
++    "  else\n"
++    "  {\n"
++    "    if (gl_FragDepth <= odepth) { discard; }\n"
++    "    if (gl_FragDepth >= tdepth - .000001*tdepth) { discard; }\n"
++    "  }\n");
+ 
+   return true;
+ }
+@@ -679,6 +694,7 @@ bool vtkDepthPeelingPass::SetShaderParameters(vtkShaderProgram* program, vtkAbst
+   float vpSize[2] = { static_cast<float>(this->ViewportWidth),
+     static_cast<float>(this->ViewportHeight) };
+   program->SetUniform2f("vpSize", vpSize);
++  program->SetUniformi("dpReverseZ", this->Framebuffer->GetContext()->GetUseReverseZ() ? 1 : 0);
+ 
+   return true;
+ }
+diff --git a/Rendering/OpenGL2/vtkDualDepthPeelingPass.cxx b/Rendering/OpenGL2/vtkDualDepthPeelingPass.cxx
+index 2eb35691..d43146ed 100644
+--- a/Rendering/OpenGL2/vtkDualDepthPeelingPass.cxx
++++ b/Rendering/OpenGL2/vtkDualDepthPeelingPass.cxx
+@@ -66,6 +66,20 @@ void annotate(const std::string& str)
+ {
+   vtkOpenGLRenderUtilities::MarkDebugEvent(str);
+ }
++
++// The peeling orders depths from 0 at the near plane to 1 at the far one, and marks pixels without
++// any with -1. Reversed depth (vtkRenderWindow::UseReverseZ) runs from 1 at the near plane to 0 at
++// the far one: the peeling takes 1 - depth, which turns its own depths back into the window's too.
++bool UseReverseZ(const vtkRenderState* s)
++{
++  vtkRenderWindow* renWin = s ? s->GetRenderer()->GetRenderWindow() : nullptr;
++  return renWin && renWin->GetUseReverseZ();
++}
++
++std::string PeelingDepth(bool reverseZ, const std::string& depth)
++{
++  return reverseZ ? "(1. - " + depth + ")" : depth;
++}
+ }
+ 
+ //------------------------------------------------------------------------------
+@@ -206,6 +220,12 @@ vtkMTimeType vtkDualDepthPeelingPass::GetShaderStageMTime()
+ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+   std::string&, std::string&, std::string& fragmentShader, vtkAbstractMapper*, vtkProp*)
+ {
++  // the fragment's depth as the peeling orders it (see PeelingDepth), declared ahead of the
++  // stage's code
++  const std::string peelDepth =
++    "float peelDepth = " + ::PeelingDepth(::UseReverseZ(this->RenderState), "gl_FragDepth") +
++    ";\n  //VTK::DepthPeeling::PreColor";
++
+   switch (this->CurrentStage)
+   {
+     case vtkDualDepthPeelingPass::InitializingDepth:
+@@ -216,17 +236,18 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         fragmentShader, "//VTK::Depth::Impl", "gl_FragDepth = gl_FragCoord.z;");
+       vtkShaderProgram::Substitute(
+         fragmentShader, "//VTK::DepthPeeling::Dec", "uniform sampler2D opaqueDepth;\n");
++      vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::PreColor", peelDepth);
+       vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::PreColor",
+         "ivec2 pixel = ivec2(gl_FragCoord.xy);\n"
+         "  float oDepth = texelFetch(opaqueDepth, pixel, 0).y;\n"
+-        "  if (oDepth != -1. && gl_FragDepth > oDepth)\n"
++        "  if (oDepth != -1. && peelDepth > oDepth)\n"
+         "    { // Ignore fragments that are occluded by opaque geometry:\n"
+         "    gl_FragData[1].xy = vec2(-1., oDepth);\n"
+         "    return;\n"
+         "    }\n"
+         "  else\n"
+         "    {\n"
+-        "    gl_FragData[1].xy = vec2(-gl_FragDepth, gl_FragDepth);\n"
++        "    gl_FragData[1].xy = vec2(-peelDepth, peelDepth);\n"
+         "    return;\n"
+         "    }\n");
+       break;
+@@ -240,6 +261,7 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+       vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::Dec",
+         "uniform sampler2D lastFrontPeel;\n"
+         "uniform sampler2D lastDepthPeel;\n");
++      vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::PreColor", peelDepth);
+       vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::PreColor",
+         "  ivec2 pixelCoord = ivec2(gl_FragCoord.xy);\n"
+         "  vec4 front = texelFetch(lastFrontPeel, pixelCoord, 0);\n"
+@@ -260,8 +282,8 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         "  gl_FragData[2].xy = vec2(-1.);\n"
+         "\n"
+         "  // Is this fragment outside the current peels?\n"
+-        "  if (gl_FragDepth < minDepth - epsilon ||\n"
+-        "      gl_FragDepth > maxDepth + epsilon)\n"
++        "  if (peelDepth < minDepth - epsilon ||\n"
++        "      peelDepth > maxDepth + epsilon)\n"
+         "    {\n"
+ #ifndef NO_PRECOLOR_EARLY_RETURN
+         "    return;\n"
+@@ -273,11 +295,11 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         "    }\n"
+         "\n"
+         "  // Is this fragment inside the current peels?\n"
+-        "  if (gl_FragDepth > minDepth + epsilon &&\n"
+-        "      gl_FragDepth < maxDepth - epsilon)\n"
++        "  if (peelDepth > minDepth + epsilon &&\n"
++        "      peelDepth < maxDepth - epsilon)\n"
+         "    {\n"
+         "    // Write out depth so this frag will be peeled later:\n"
+-        "    gl_FragData[2].xy = vec2(-gl_FragDepth, gl_FragDepth);\n"
++        "    gl_FragData[2].xy = vec2(-peelDepth, peelDepth);\n"
+ #ifndef NO_PRECOLOR_EARLY_RETURN
+         "    return;\n"
+ #else
+@@ -293,8 +315,8 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         "  // Default outputs (no data/change):\n"
+         "\n"
+         "  // This fragment is on a current peel:\n"
+-        "  if (gl_FragDepth >= minDepth - epsilon &&\n"
+-        "      gl_FragDepth <= minDepth + epsilon)\n"
++        "  if (peelDepth >= minDepth - epsilon &&\n"
++        "      peelDepth <= minDepth + epsilon)\n"
+         "    { // Front peel:\n"
+         "    // Clear the back color:\n"
+         "    gl_FragData[0] = vec4(0.);\n"
+@@ -311,12 +333,12 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         "    }\n"
+ #ifndef NO_PRECOLOR_EARLY_RETURN
+         // just 'else' is ok. We'd return earlier in this case.
+-        "  else // (gl_FragDepth == maxDepth)\n"
++        "  else // (peelDepth == maxDepth)\n"
+ #else
+         // Need to explicitly test if this is the back peel, since early
+         // returns are removed.
+-        "  else if (gl_FragDepth >= maxDepth - epsilon &&\n"
+-        "           gl_FragDepth <= maxDepth + epsilon)\n"
++        "  else if (peelDepth >= maxDepth - epsilon &&\n"
++        "           peelDepth <= maxDepth + epsilon)\n"
+ #endif
+         "    { // Back peel:\n"
+         "    // Dump premultiplied fragment, it will be blended later:\n"
+@@ -343,6 +365,7 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         fragmentShader, "//VTK::Depth::Impl", "gl_FragDepth = gl_FragCoord.z;");
+       vtkShaderProgram::Substitute(
+         fragmentShader, "//VTK::DepthPeeling::Dec", "uniform sampler2D lastDepthPeel;\n");
++      vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::PreColor", peelDepth);
+       vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::PreColor",
+         "  ivec2 pixelCoord = ivec2(gl_FragCoord.xy);\n"
+         "  vec2 minMaxDepth = texelFetch(lastDepthPeel, pixelCoord, 0).xy;\n"
+@@ -350,7 +373,7 @@ bool vtkDualDepthPeelingPass::PostReplaceTranslucentShaderValues(
+         "  float maxDepth = minMaxDepth.y;\n"
+         "\n"
+         "  // Discard all fragments outside of the last set of peels:\n"
+-        "  if (gl_FragDepth < minDepth || gl_FragDepth > maxDepth)\n"
++        "  if (peelDepth < minDepth || peelDepth > maxDepth)\n"
+         "    {\n"
+         "    discard;\n"
+         "    }\n");
+@@ -379,13 +402,22 @@ bool vtkDualDepthPeelingPass::PreReplaceVolumetricShaderValues(
+     return true;
+   }
+ 
++  // castRay() takes the peeling's depths, WindowToNDC() the window's (see PeelingDepth)
++  const bool reverseZ = ::UseReverseZ(this->RenderState);
++  const std::string zStart = ::PeelingDepth(reverseZ, "zStart");
++  const std::string zEnd = ::PeelingDepth(reverseZ, "zEnd");
++  const std::string opaqueDepth =
++    ::PeelingDepth(reverseZ, "texture2D(opaqueDepthTex, pixelCoord * in_inverseWindowSize).x");
++
+   std::string rayInit =
+     "  // Transform zStart and zEnd to texture_coordinates\n"
+     "  mat4 NDCToTextureCoords = ip_inverseTextureDataAdjusted * in_inverseVolumeMatrix[0] *\n"
+     "    in_inverseModelViewMatrix * in_inverseProjectionMatrix;\n"
+     "  \n"
+     "  // Start point\n"
+-    "  vec4 startPoint = WindowToNDC(gl_FragCoord.x, gl_FragCoord.y, zStart);\n"
++    "  vec4 startPoint = WindowToNDC(gl_FragCoord.x, gl_FragCoord.y, " +
++    zStart +
++    ");\n"
+     "  startPoint = NDCToTextureCoords * startPoint;\n"
+     "  startPoint /= startPoint.w;\n"
+ 
+@@ -423,7 +455,9 @@ bool vtkDualDepthPeelingPass::PreReplaceVolumetricShaderValues(
+     "\n"
+     "  // End point\n"
+     "  {\n"
+-    "    vec4 endPoint = WindowToNDC(gl_FragCoord.x, gl_FragCoord.y, zEnd);\n"
++    "    vec4 endPoint = WindowToNDC(gl_FragCoord.x, gl_FragCoord.y, " +
++    zEnd +
++    ");\n"
+     "    endPoint = NDCToTextureCoords * endPoint;\n"
+     "    g_terminatePos = endPoint.xyz / endPoint.w;\n"
+     "  }\n"
+@@ -621,44 +655,46 @@ bool vtkDualDepthPeelingPass::PreReplaceVolumetricShaderValues(
+         // to opaque-depth and back ray-cast is skipped altogether since it
+         // would be covered by opaque geometry anyway.
+ 
+-        "  float oDepth = texture2D(opaqueDepthTex, pixelCoord * in_inverseWindowSize).x;\n"
+-        "  bool endBehindOpaque = frontEndDepth >= oDepth;\n"
+-        "  float clampedFrontEnd = frontEndDepth;\n"
+-        "  if (endBehindOpaque)\n"
+-        "  {\n"
+-        "    clampedFrontEnd = clamp(frontEndDepth, oDepth, oDepth);\n"
+-        "  }\n"
+-        "  \n"
+-        "  initializeRayCast();\n"
+-        "  vec4 frontColor = vec4(0.f);\n"
+-        "  if (!onlyBack)\n"
+-        "  {\n"
+-        "    frontColor = castRay(frontStartDepth,\n"
+-        "                         clampedFrontEnd);\n"
+-        "  }\n"
+-        "\n"
+-        "  vec4 backColor = vec4(0.);\n"
+-        "  if (!endBehindOpaque && !noInnerDepths)"
+-        "  {\n"
+-        "    backColor = castRay(backStartDepth,\n"
+-        "                        backEndDepth);\n"
+-        "  }\n"
+-        "\n"
+-        "  // The color returned by castRay() has alpha pre-multiplied,\n"
+-        "  // as required for back-blending.\n"
+-        "  gl_FragData[0] = backColor;\n"
+-        "\n"
+-        "  // Front color is written with negated alpha for MAX blending:\n"
+-        "  lastFrontColor.a = 1. - lastFrontColor.a;\n"
+-        "\n"
+-        "  // Use under-blending to mix the front color on-the-fly:\n"
+-        "  // (note that frontColor.rgb is already multiplied by its\n"
+-        "  // alpha, this is done within castRay())\n"
+-        "  gl_FragData[1].rgb =\n"
+-        "    lastFrontColor.a * frontColor.rgb + lastFrontColor.rgb;\n"
+-        "\n"
+-        "  // Write out (1-alpha) for MAX blending:\n"
+-        "  gl_FragData[1].a = 1. - (lastFrontColor.a * (1. - frontColor.a));\n");
++        "  float oDepth = " +
++          opaqueDepth +
++          ";\n"
++          "  bool endBehindOpaque = frontEndDepth >= oDepth;\n"
++          "  float clampedFrontEnd = frontEndDepth;\n"
++          "  if (endBehindOpaque)\n"
++          "  {\n"
++          "    clampedFrontEnd = clamp(frontEndDepth, oDepth, oDepth);\n"
++          "  }\n"
++          "  \n"
++          "  initializeRayCast();\n"
++          "  vec4 frontColor = vec4(0.f);\n"
++          "  if (!onlyBack)\n"
++          "  {\n"
++          "    frontColor = castRay(frontStartDepth,\n"
++          "                         clampedFrontEnd);\n"
++          "  }\n"
++          "\n"
++          "  vec4 backColor = vec4(0.);\n"
++          "  if (!endBehindOpaque && !noInnerDepths)"
++          "  {\n"
++          "    backColor = castRay(backStartDepth,\n"
++          "                        backEndDepth);\n"
++          "  }\n"
++          "\n"
++          "  // The color returned by castRay() has alpha pre-multiplied,\n"
++          "  // as required for back-blending.\n"
++          "  gl_FragData[0] = backColor;\n"
++          "\n"
++          "  // Front color is written with negated alpha for MAX blending:\n"
++          "  lastFrontColor.a = 1. - lastFrontColor.a;\n"
++          "\n"
++          "  // Use under-blending to mix the front color on-the-fly:\n"
++          "  // (note that frontColor.rgb is already multiplied by its\n"
++          "  // alpha, this is done within castRay())\n"
++          "  gl_FragData[1].rgb =\n"
++          "    lastFrontColor.a * frontColor.rgb + lastFrontColor.rgb;\n"
++          "\n"
++          "  // Write out (1-alpha) for MAX blending:\n"
++          "  gl_FragData[1].a = 1. - (lastFrontColor.a * (1. - frontColor.a));\n");
+ 
+       vtkShaderProgram::Substitute(fragmentShader, "//VTK::DepthPeeling::Ray::Init", rayInit);
+ 
+@@ -1101,6 +1137,14 @@ void vtkDualDepthPeelingPass::CopyOpaqueDepthBuffer()
+ 
+   vtkOpenGLRenderWindow* renWin =
+     static_cast<vtkOpenGLRenderWindow*>(this->RenderState->GetRenderer()->GetRenderWindow());
++
++  // the shader stores the peeling's depth (see PeelingDepth): made again when the window's turns
++  const bool reverseZ = renWin->GetUseReverseZ();
++  if (this->CopyDepthHelper && this->CopyDepthHelper->ShaderChangeValue != (reverseZ ? 1u : 0u))
++  {
++    delete this->CopyDepthHelper;
++    this->CopyDepthHelper = nullptr;
++  }
+   if (!this->CopyDepthHelper)
+   {
+     std::string fragShader = vtkOpenGLRenderUtilities::GetFullScreenQuadFragmentShaderTemplate();
+@@ -1113,8 +1157,10 @@ void vtkDualDepthPeelingPass::CopyOpaqueDepthBuffer()
+       "    { // If no depth value has been written, discard the frag:\n"
+       "    discard;\n"
+       "    }\n"
+-      "  gl_FragData[0] = gl_FragData[1] = vec4(-1, d, 0., 0.);\n");
++      "  gl_FragData[0] = gl_FragData[1] = vec4(-1, " +
++        ::PeelingDepth(reverseZ, "d") + ", 0., 0.);\n");
+     this->CopyDepthHelper = new vtkOpenGLQuadHelper(renWin, nullptr, fragShader.c_str(), nullptr);
++    this->CopyDepthHelper->ShaderChangeValue = reverseZ ? 1 : 0;
+   }
+   else
+   {
+diff --git a/Rendering/OpenGL2/vtkEDLShading.cxx b/Rendering/OpenGL2/vtkEDLShading.cxx
+index 9150f1ca..4e8841c3 100644
+--- a/Rendering/OpenGL2/vtkEDLShading.cxx
++++ b/Rendering/OpenGL2/vtkEDLShading.cxx
+@@ -364,6 +364,7 @@ bool vtkEDLShading::EDLShadeHigh(vtkRenderState& s, vtkOpenGLRenderWindow* renWi
+   prog->SetUniform4fv("N", 8, this->EDLNeighbours);
+   prog->SetUniformf("Znear", this->Zn);
+   prog->SetUniformf("Zfar", this->Zf);
++  prog->SetUniformi("ReverseZ", renWin->GetUseReverseZ() ? 1 : 0);
+ 
+   // compute the scene bounding box, and set the scene size to the diagonal of it.
+   double bb[6];
+@@ -453,6 +454,7 @@ bool vtkEDLShading::EDLShadeLow(vtkRenderState& s, vtkOpenGLRenderWindow* renWin
+   prog->SetUniform4fv("N", 8, this->EDLNeighbours); // USELESS, ALREADY DEFINED IN FULL RES
+   prog->SetUniformf("Znear", this->Zn);
+   prog->SetUniformf("Zfar", this->Zf);
++  prog->SetUniformi("ReverseZ", renWin->GetUseReverseZ() ? 1 : 0);
+ 
+   // RENDER AND FREE ALL
+   //
+@@ -561,7 +563,7 @@ bool vtkEDLShading::EDLCompose(const vtkRenderState*, vtkOpenGLRenderWindow* ren
+   //
+   // Prepare blitting
+   ostate->vtkglClearColor(1., 1., 1., 1.);
+-  ostate->vtkglClearDepth(1.0);
++  ostate->vtkglClearDepth(renWin->GetUseReverseZ() ? 0.0 : 1.0); // the far plane
+   ostate->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   // IMPORTANT since we enable depth writing hereafter
+   ostate->vtkglDisable(GL_BLEND);
+diff --git a/Rendering/OpenGL2/vtkFastLabeledDataMapper.cxx b/Rendering/OpenGL2/vtkFastLabeledDataMapper.cxx
+index b6900853..52b3a961 100644
+--- a/Rendering/OpenGL2/vtkFastLabeledDataMapper.cxx
++++ b/Rendering/OpenGL2/vtkFastLabeledDataMapper.cxx
+@@ -1573,6 +1573,24 @@ void vtkFastLabeledDataMapper::BuildShaders(
+   if (sp != nullptr)
+   {
+     MakeupShaders(sp);
++
++    // reversed depth (vtkRenderWindow::UseReverseZ) is the greater the nearer, in floats: the
++    // background and the frame go behind the text the other way, a unit of the constant one
++    // part of the fragment's own depth, as it is of the depth range in a fixed-point buffer
++    if (ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ())
++    {
++      sp->AddShaderReplacement(vtkShader::Fragment, "//VTK::Depth::Impl", true,
++        "if (layer == 0) {\n"
++        "  gl_FragDepth = gl_FragCoord.z;\n"
++        "}\n"
++        "if (layer == 1) {\n"
++        "  gl_FragDepth = gl_FragCoord.z - 2.0*cscale - 0.000016*2.0*gl_FragCoord.z;\n"
++        "}\n"
++        "if (layer == 2) {\n"
++        "  gl_FragDepth = gl_FragCoord.z - 2.0*cscale - 0.000016*4.0*gl_FragCoord.z;\n"
++        "}\n",
++        false);
++    }
+   }
+ 
+   vtkOpenGLPolyDataMapper::BuildShaders(shaders, ren, actor);
+diff --git a/Rendering/OpenGL2/vtkGLSLModCoincidentTopology.cxx b/Rendering/OpenGL2/vtkGLSLModCoincidentTopology.cxx
+index 0131b8f4..b012a7b8 100644
+--- a/Rendering/OpenGL2/vtkGLSLModCoincidentTopology.cxx
++++ b/Rendering/OpenGL2/vtkGLSLModCoincidentTopology.cxx
+@@ -12,6 +12,7 @@
+ #include "vtkOpenGLCamera.h"
+ #include "vtkOpenGLRenderer.h"
+ #include "vtkProperty.h"
++#include "vtkRenderWindow.h"
+ #include "vtkShaderProgram.h"
+ 
+ #include "vtk_glad.h"
+@@ -55,15 +56,27 @@ bool vtkGLSLModCoincidentTopology::ReplaceShaderValues(vtkOpenGLRenderer* render
+   // cache the result taking into account FBO changes etc.
+   if (factor != 0.0 || offset != 0.0)
+   {
++    // reversed depth (vtkRenderWindow::UseReverseZ, cReverseZ) is the greater the nearer, in
++    // floats: the offsets turn round, a unit of the constant one 1/65000 of the fragment's own
++    // depth, as it is of the depth range in a fixed-point buffer. A uniform, since this mod's
++    // replacements stay up to date when the window's depth changes.
+     vtkShaderProgram::Substitute(fragmentShader, "//VTK::Coincident::Dec",
+       "uniform float cOffset;\n"
+-      "uniform float cFactor;\n");
++      "uniform float cFactor;\n"
++      "uniform int cReverseZ;\n");
+     vtkShaderProgram::Substitute(fragmentShader, "//VTK::UniformFlow::Impl",
+       "float cscale = length(vec2(dFdx(gl_FragCoord.z), dFdy(gl_FragCoord.z)));\n"
+       "  //VTK::UniformFlow::Impl\n" // for other replacements
+     );
+     vtkShaderProgram::Substitute(fragmentShader, "//VTK::Depth::Impl",
+-      "gl_FragDepth = gl_FragCoord.z + cFactor*cscale + 1.0*cOffset/65000.0f;\n");
++      "if (cReverseZ == 0)\n"
++      "  {\n"
++      "    gl_FragDepth = gl_FragCoord.z + cFactor*cscale + 1.0*cOffset/65000.0f;\n"
++      "  }\n"
++      "  else\n"
++      "  {\n"
++      "    gl_FragDepth = gl_FragCoord.z - cFactor*cscale - cOffset*gl_FragCoord.z/65000.0f;\n"
++      "  }\n");
+   }
+   this->ReplacementsDone = true;
+   return true;
+@@ -87,6 +100,11 @@ bool vtkGLSLModCoincidentTopology::SetShaderParameters(vtkOpenGLRenderer* render
+   {
+     program->SetUniformf("cOffset", offset);
+     program->SetUniformf("cFactor", factor);
++    if (program->IsUniformUsed("cReverseZ"))
++    {
++      program->SetUniformi("cReverseZ",
++        renderer->GetRenderWindow() && renderer->GetRenderWindow()->GetUseReverseZ() ? 1 : 0);
++    }
+   }
+ 
+   return true;
+diff --git a/Rendering/OpenGL2/vtkOpenGLFluidMapper.cxx b/Rendering/OpenGL2/vtkOpenGLFluidMapper.cxx
+index 6e177d89..7c241a85 100644
+--- a/Rendering/OpenGL2/vtkOpenGLFluidMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLFluidMapper.cxx
+@@ -179,6 +179,8 @@ void vtkOpenGLFluidMapper::SetDepthThicknessColorShaderParameters(
+   const auto program = glHelper.Program;
+ 
+   program->SetUniformi("outputEyeZ", this->InDepthPass);
++  program->SetUniformi(
++    "reverseZ", ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ() ? 1 : 0);
+   if (!this->InDepthPass)
+   {
+     // based on clipping range
+@@ -379,6 +381,10 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+   const auto renderWindow = vtkOpenGLRenderWindow::SafeDownCast(renderer->GetRenderWindow());
+   this->SetupBuffers(renderWindow);
+ 
++  // reversed depth (vtkRenderWindow::UseReverseZ) clears to 0 at the far plane and is the greater
++  // the nearer
++  const bool reverseZ = renderWindow->GetUseReverseZ();
++
+   const auto glState = renderWindow->GetState();
+   glState->vtkglViewport(0, 0, this->ViewportWidth, this->ViewportHeight);
+   bool saveScissorTestState = glState->GetEnumState(GL_SCISSOR_TEST);
+@@ -398,7 +404,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+     this->FBFluidEyeZ->ActivateDrawBuffers(1);
+     this->FBFluidEyeZ->CheckFrameBufferStatus(GL_FRAMEBUFFER);
+     glState->vtkglDisable(GL_SCISSOR_TEST);
+-    glState->vtkglClearDepth(1.0);
++    glState->vtkglClearDepth(reverseZ ? 0.0 : 1.0);
+     glState->vtkglColorMask(GL_TRUE, GL_FALSE, GL_FALSE, GL_FALSE);
+     // Set a clear color value to be slightly past the far clipping plane
+     glState->vtkglClearColor(-1.1 * crange[1], 0.0, 0.0, 0.0);
+@@ -408,7 +414,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+     this->TexBuffer[OpaqueZ]->Activate();
+     glState->vtkglDepthMask(GL_TRUE);
+     glState->vtkglEnable(GL_DEPTH_TEST);
+-    glState->vtkglDepthFunc(GL_LEQUAL);
++    glState->vtkglDepthFunc(reverseZ ? GL_GEQUAL : GL_LEQUAL);
+     this->InDepthPass = true;
+     this->RenderParticles(renderer, vol);
+     this->InDepthPass = false;
+@@ -434,7 +440,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+       this->FBThickness->CheckFrameBufferStatus(GL_FRAMEBUFFER);
+     }
+     glState->vtkglDisable(GL_SCISSOR_TEST);
+-    glState->vtkglClearDepth(1.0);
++    glState->vtkglClearDepth(reverseZ ? 0.0 : 1.0);
+     glState->vtkglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+     glState->vtkglClearColor(0.0, 0.0, 0.0, 0.0);
+     glState->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+@@ -481,7 +487,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+       this->FBFilterThickness->AddColorAttachment(0U, this->TexBuffer[SmoothedFluidThickness]);
+       this->FBFilterThickness->ActivateDrawBuffers(1);
+       this->FBFilterThickness->CheckFrameBufferStatus(GL_FRAMEBUFFER);
+-      glState->vtkglClearDepth(1.0);
++      glState->vtkglClearDepth(reverseZ ? 0.0 : 1.0);
+       glState->vtkglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+       glState->vtkglClearColor(0.0, 0.0, 0.0, 0.0);
+       glState->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+@@ -563,7 +569,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+           0U, this->TexBuffer[SmoothedFluidEyeZ]); // Replace color attachment
+         this->FBFilterDepth->ActivateDrawBuffers(1);
+         this->FBFilterDepth->CheckFrameBufferStatus(GL_FRAMEBUFFER);
+-        glState->vtkglClearDepth(1.0);
++        glState->vtkglClearDepth(reverseZ ? 0.0 : 1.0);
+         glState->vtkglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+         glState->vtkglClearColor(0.0, 0.0, 0.0, 0.0);
+         glState->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+@@ -839,6 +845,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+     program->SetUniform3f("fluidOpaqueColor", this->OpaqueColor);
+     program->SetUniform3f("fluidAttenuationColor", this->AttenuationColor);
+     program->SetUniformf("farZValue", -crange[1]);
++    program->SetUniformi("reverseZ", reverseZ ? 1 : 0);
+     program->SetUniformf("ambientValue", vol->GetProperty()->GetAmbient());
+     glState->vtkglEnable(GL_DEPTH_TEST);
+     glState->vtkglDepthMask(GL_TRUE);
+@@ -856,7 +863,7 @@ void vtkOpenGLFluidMapper::Render(vtkRenderer* renderer, vtkVolume* vol)
+       this->OptionalTexBuffer[Color]->Deactivate();
+     }
+ 
+-    glState->vtkglDepthFunc(GL_LEQUAL);
++    glState->vtkglDepthFunc(reverseZ ? GL_GEQUAL : GL_LEQUAL);
+   }
+ }
+ 
+diff --git a/Rendering/OpenGL2/vtkOpenGLLowMemoryPolyDataMapper.cxx b/Rendering/OpenGL2/vtkOpenGLLowMemoryPolyDataMapper.cxx
+index 706d9522..8bb0f38f 100644
+--- a/Rendering/OpenGL2/vtkOpenGLLowMemoryPolyDataMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLLowMemoryPolyDataMapper.cxx
+@@ -2753,9 +2753,15 @@ void vtkOpenGLLowMemoryPolyDataMapper::SetShaderParameters(vtkRenderer* renderer
+     this->ShaderProgram->SetUniformi(loc.CameraParallel, oglCam->GetParallelProjection());
+     if (loc.ZCalcR != -1)
+     {
++      // reversed depth (vtkRenderWindow::UseReverseZ) is NDC z itself, the conventional one half
++      // of it plus a half: S becomes -C in perspective and 2C in parallel (the same view-space
++      // offset)
++      const bool reverseZ =
++        renderer->GetRenderWindow() && renderer->GetRenderWindow()->GetUseReverseZ();
++      const double c = vcdc->GetElement(2, 2);
+       const float zCalcS = oglCam->GetParallelProjection()
+-        ? static_cast<float>(vcdc->GetElement(2, 2))
+-        : static_cast<float>(-0.5 * vcdc->GetElement(2, 2) + 0.5);
++        ? static_cast<float>(reverseZ ? 2.0 * c : c)
++        : static_cast<float>(reverseZ ? -c : -0.5 * c + 0.5);
+       this->ShaderProgram->SetUniformf(loc.ZCalcS, zCalcS);
+       const double denom = static_cast<double>(renderer->GetSize()[0]) * vcdc->GetElement(0, 0);
+       if (denom != 0.0)
+diff --git a/Rendering/OpenGL2/vtkOpenGLPointGaussianMapper.cxx b/Rendering/OpenGL2/vtkOpenGLPointGaussianMapper.cxx
+index 665d664f..6f20bef4 100644
+--- a/Rendering/OpenGL2/vtkOpenGLPointGaussianMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLPointGaussianMapper.cxx
+@@ -182,6 +182,10 @@ bool vtkOpenGLPointGaussianMapperHelper::GetNeedToRebuildShaders(
+ 
+   vtkMTimeType renderPassMTime = this->GetRenderPassStageMTime(actor, &cellBO);
+ 
++  // the coincident offsets turn round with reversed depth (vtkRenderWindow::UseReverseZ)
++  const unsigned int reverseZ =
++    ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ() ? 1 : 0;
++
+   // has something changed that would require us to recreate the shader?
+   // candidates are
+   // property modified (representation interpolation and lighting)
+@@ -191,8 +195,9 @@ bool vtkOpenGLPointGaussianMapperHelper::GetNeedToRebuildShaders(
+     cellBO.ShaderSourceTime < actor->GetMTime() ||
+     cellBO.ShaderSourceTime < this->CurrentInput->GetMTime() ||
+     cellBO.ShaderSourceTime < this->SelectionStateChanged ||
+-    cellBO.ShaderSourceTime < renderPassMTime)
++    cellBO.ShaderSourceTime < renderPassMTime || cellBO.ShaderChangeValue != reverseZ)
+   {
++    cellBO.ShaderChangeValue = reverseZ;
+     return true;
+   }
+ 
+diff --git a/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx b/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx
+index 5900ace4..6514bc90 100644
+--- a/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLPolyDataMapper.cxx
+@@ -2688,7 +2688,8 @@ bool vtkOpenGLPolyDataMapper::GetNeedToRebuildShaders(
+     (actor->GetProperty()->GetCoatStrength() > 0.0 ? 0x80 : 0) +
+     (actor->GetProperty()->GetAnisotropy() > 0.0 ? 0x100 : 0) +
+     (vtkOpenGLRenderer::SafeDownCast(ren)->GetUseImageBasedLighting() ? 0x200 : 0) +
+-    ((this->VBOs->GetNumberOfComponents("tcoord") % 4) << 10);
++    ((this->VBOs->GetNumberOfComponents("tcoord") % 4) << 10) +
++    ((ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ()) ? 0x1000 : 0);
+ 
+   if (cellBO.Program == nullptr || cellBO.ShaderSourceTime < this->GetMTime() ||
+     cellBO.ShaderSourceTime < actor->GetProperty()->GetMTime() ||
+@@ -3091,13 +3092,18 @@ void vtkOpenGLPolyDataMapper::SetCameraShaderParameters(
+ 
+   if (program->IsUniformUsed("ZCalcR"))
+   {
++    // reversed depth (vtkRenderWindow::UseReverseZ) is NDC z itself, the conventional one half of
++    // it plus a half: S becomes -C in perspective and 2C in parallel (the same view-space offset)
++    const bool reverseZ = ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ();
+     if (cam->GetParallelProjection())
+     {
+-      program->SetUniformf("ZCalcS", vcdc->GetElement(2, 2));
++      program->SetUniformf(
++        "ZCalcS", reverseZ ? 2.0 * vcdc->GetElement(2, 2) : vcdc->GetElement(2, 2));
+     }
+     else
+     {
+-      program->SetUniformf("ZCalcS", -0.5 * vcdc->GetElement(2, 2) + 0.5);
++      program->SetUniformf(
++        "ZCalcS", reverseZ ? -vcdc->GetElement(2, 2) : -0.5 * vcdc->GetElement(2, 2) + 0.5);
+     }
+     if (this->DrawingSpheres(cellBO, actor))
+     {
+diff --git a/Rendering/OpenGL2/vtkOpenGLPolyDataMapper2D.cxx b/Rendering/OpenGL2/vtkOpenGLPolyDataMapper2D.cxx
+index 87ef69fc..79d85a98 100644
+--- a/Rendering/OpenGL2/vtkOpenGLPolyDataMapper2D.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLPolyDataMapper2D.cxx
+@@ -518,8 +518,12 @@ void vtkOpenGLPolyDataMapper2D::SetCameraShaderParameters(
+   tmpMat->SetElement(0, 3, -1.0 * (right + left) / (right - left));
+   tmpMat->SetElement(1, 3, -1.0 * (top + bottom) / (top - bottom));
+   tmpMat->SetElement(2, 2, 0.0);
+-  tmpMat->SetElement(
+-    2, 3, actor->GetProperty()->GetDisplayLocation() == VTK_FOREGROUND_LOCATION ? -1.0 : 1.0);
++  // on the near plane in the foreground, on the far one in the background: NDC z 1 and 0 in
++  // reversed depth (vtkRenderWindow::UseReverseZ), which clips it to [0, 1]
++  vtkRenderWindow* renWin = vtkRenderWindow::SafeDownCast(viewport->GetVTKWindow());
++  const bool reverseZ = renWin && renWin->GetUseReverseZ();
++  const bool foreground = actor->GetProperty()->GetDisplayLocation() == VTK_FOREGROUND_LOCATION;
++  tmpMat->SetElement(2, 3, foreground ? (reverseZ ? 1.0 : -1.0) : (reverseZ ? 0.0 : 1.0));
+   tmpMat->SetElement(3, 3, 1.0);
+   tmpMat->Transpose();
+   /*
+diff --git a/Rendering/OpenGL2/vtkOpenGLSkybox.cxx b/Rendering/OpenGL2/vtkOpenGLSkybox.cxx
+index 0e50c571..56c36188 100644
+--- a/Rendering/OpenGL2/vtkOpenGLSkybox.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLSkybox.cxx
+@@ -15,6 +15,7 @@
+ #include "vtkPoints.h"
+ #include "vtkPolyData.h"
+ #include "vtkProperty.h"
++#include "vtkRenderWindow.h"
+ #include "vtkShaderProgram.h"
+ #include "vtkTexture.h"
+ 
+@@ -49,13 +50,15 @@ vtkOpenGLSkybox::vtkOpenGLSkybox()
+     "//VTK::PositionVC::Dec",  // replace
+     true,                      // before the standard replacements
+     "//VTK::PositionVC::Dec\n" // we still want the default
+-    "out vec3 TexCoords;\n",
+-    false // only do it once
++    "out vec3 TexCoords;\n"
++    "uniform highp int skyboxReverseZ;\n", // highp: as in the fragment shader, on ES too
++    false                                  // only do it once
+   );
++  // on the far plane: NDC z 0 in reversed depth (vtkRenderWindow::UseReverseZ)
+   sp->AddShaderReplacement(vtkShader::Vertex,
+     "//VTK::PositionVC::Impl", // replace
+     true,                      // before the standard replacements
+-    "  gl_Position = vec4(vertexMC.xy, 1.0, 1.0);\n"
++    "  gl_Position = vec4(vertexMC.xy, skyboxReverseZ != 0 ? 0.0 : 1.0, 1.0);\n"
+     "  vec4 tmpc = inverse(MCDCMatrix) * gl_Position;\n"
+     "  TexCoords = tmpc.xyz/tmpc.w;\n",
+     false // only do it once
+@@ -106,6 +109,8 @@ void vtkOpenGLSkybox::UpdateUniforms(vtkObject*, unsigned long, void* calldata)
+   program->SetUniformf(
+     "leftEye", (this->CurrentRenderer->GetActiveCamera()->GetLeftEye() ? 1.0 : 0.0));
+   program->SetUniformMatrix("rotationMatrix", this->RotationMatrix);
++  vtkRenderWindow* renWin = this->CurrentRenderer->GetRenderWindow();
++  program->SetUniformi("skyboxReverseZ", renWin && renWin->GetUseReverseZ() ? 1 : 0);
+ }
+ 
+ // Actual Skybox render method.
+@@ -180,6 +185,7 @@ void vtkOpenGLSkybox::Render(vtkRenderer* ren, vtkMapper* mapper)
+         "uniform vec3 floorFront;\n"       // floor plane front
+         "uniform vec2 floorTCoordScale;\n" // floor texture scale
+         "uniform mat4 MCDCMatrix;\n"
++        "uniform highp int skyboxReverseZ;\n"
+         "uniform sampler2D actortexture;\n");
+ 
+       vtkShaderProgram::Substitute(str, "//VTK::Projection::Impl",
+@@ -201,7 +207,9 @@ void vtkOpenGLSkybox::Render(vtkRenderer* ren, vtkMapper* mapper)
+         // going to zero at 90 degrees.
+         "      gl_FragData[0].a *= (50.0*min(0.02, abs(den)));\n"
+         "      vec4 tpos = MCDCMatrix*vec4(pos.xyz + 0.01 * p0l0,1.0);\n"
+-        "      gl_FragDepth = clamp(0.5 + 0.5*tpos.z/tpos.w,0.0,1.0);\n"
++        // reversed depth (vtkRenderWindow::UseReverseZ) is NDC z itself
++        "      gl_FragDepth = clamp(skyboxReverseZ != 0 ? tpos.z/tpos.w : 0.5 + 0.5*tpos.z/tpos.w, "
++        "0.0, 1.0);\n"
+         "    } else { discard; }\n"
+         "  }\n");
+     }
+@@ -233,7 +241,8 @@ void vtkOpenGLSkybox::Render(vtkRenderer* ren, vtkMapper* mapper)
+ 
+   // get opacity
+   static_cast<vtkOpenGLRenderer*>(ren)->GetState()->vtkglDepthMask(GL_TRUE);
+-  static_cast<vtkOpenGLRenderer*>(ren)->GetState()->vtkglDepthFunc(GL_LEQUAL);
++  static_cast<vtkOpenGLRenderer*>(ren)->GetState()->vtkglDepthFunc(
++    ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ() ? GL_GEQUAL : GL_LEQUAL);
+ 
+   // send a render to the mapper; update pipeline
+   this->Texture->Render(ren);
+diff --git a/Rendering/OpenGL2/vtkOpenGLSphereMapper.cxx b/Rendering/OpenGL2/vtkOpenGLSphereMapper.cxx
+index 211b1000..8635a202 100644
+--- a/Rendering/OpenGL2/vtkOpenGLSphereMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLSphereMapper.cxx
+@@ -114,6 +114,13 @@ void vtkOpenGLSphereMapper::ReplaceShaderValues(
+     "  vec4 pos = VCDCMatrix * vertexVC;\n"
+     "  gl_FragDepth = (pos.z / pos.w + 1.0) / 2.0;\n");
+ 
++  // reversed depth (vtkRenderWindow::UseReverseZ) is NDC z itself
++  if (ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ())
++  {
++    vtkShaderProgram::Substitute(
++      FSSource, "gl_FragDepth = (pos.z / pos.w + 1.0) / 2.0;", "gl_FragDepth = pos.z / pos.w;");
++  }
++
+   // Strip out the normal line -- the normal is computed as part of the depth
+   vtkShaderProgram::Substitute(FSSource, "//VTK::Normal::Impl", "");
+ 
+diff --git a/Rendering/OpenGL2/vtkOpenGLStickMapper.cxx b/Rendering/OpenGL2/vtkOpenGLStickMapper.cxx
+index 28547e38..d178f9c0 100644
+--- a/Rendering/OpenGL2/vtkOpenGLStickMapper.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLStickMapper.cxx
+@@ -164,6 +164,13 @@ void vtkOpenGLStickMapper::ReplaceShaderValues(
+     "  vec4 pos = VCDCMatrix * vertexVC;\n"
+     "  gl_FragDepth = (pos.z / pos.w + 1.0) / 2.0;\n");
+ 
++  // reversed depth (vtkRenderWindow::UseReverseZ) is NDC z itself
++  if (ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ())
++  {
++    vtkShaderProgram::Substitute(
++      FSSource, "gl_FragDepth = (pos.z / pos.w + 1.0) / 2.0;", "gl_FragDepth = pos.z / pos.w;");
++  }
++
+   // Strip out the normal line -- the normal is computed as part of the depth
+   vtkShaderProgram::Substitute(FSSource, "//VTK::Normal::Impl", "");
+ 
+diff --git a/Rendering/OpenGL2/vtkOrderIndependentTranslucentPass.cxx b/Rendering/OpenGL2/vtkOrderIndependentTranslucentPass.cxx
+index 35925487..f0429f13 100644
+--- a/Rendering/OpenGL2/vtkOrderIndependentTranslucentPass.cxx
++++ b/Rendering/OpenGL2/vtkOrderIndependentTranslucentPass.cxx
+@@ -208,6 +208,16 @@ void vtkOrderIndependentTranslucentPass::Render(const vtkRenderState* s)
+     this->ViewportY = 0;
+   }
+ 
++  // reversed depth (vtkRenderWindow::UseReverseZ) is in floats, and the blit of the window's depth
++  // below needs the same format: the textures are made again when the window's depth turns
++  const bool reverseZ = renWin->GetUseReverseZ();
++  if (this->TranslucentZTexture->GetHandle() != 0 &&
++    (this->TranslucentZTexture->GetInternalFormat() == GL_DEPTH_COMPONENT32F ||
++      this->TranslucentZTexture->GetInternalFormat() == GL_DEPTH32F_STENCIL8) != reverseZ)
++  {
++    this->ReleaseGraphicsResources(renWin);
++  }
++
+   // create textures we need if not done already
+   if (this->TranslucentRGBATexture->GetHandle() == 0)
+   {
+@@ -229,11 +239,17 @@ void vtkOrderIndependentTranslucentPass::Render(const vtkRenderState* s)
+     int dbits = renWin->GetDepthBufferSize();
+     if (renWin->GetStencilCapable())
+     {
+-      this->TranslucentZTexture->AllocateDepthStencil(this->ViewportWidth, this->ViewportHeight);
++      this->TranslucentZTexture->AllocateDepthStencil(
++        this->ViewportWidth, this->ViewportHeight, reverseZ);
+     }
+     else
+     {
+-      if (dbits == 32)
++      if (reverseZ)
++      {
++        this->TranslucentZTexture->AllocateDepth(
++          this->ViewportWidth, this->ViewportHeight, vtkTextureObject::Float32);
++      }
++      else if (dbits == 32)
+       {
+         this->TranslucentZTexture->AllocateDepth(
+           this->ViewportWidth, this->ViewportHeight, vtkTextureObject::Fixed32);
+@@ -365,7 +381,7 @@ void vtkOrderIndependentTranslucentPass::Render(const vtkRenderState* s)
+   this->TranslucentRTexture->Deactivate();
+   this->TranslucentZTexture->Deactivate();
+ 
+-  this->State->vtkglDepthFunc(GL_LEQUAL);
++  this->State->vtkglDepthFunc(reverseZ ? GL_GEQUAL : GL_LEQUAL);
+ 
+ #ifdef GL_MULTISAMPLE
+   if (multiSampleStatus)
+diff --git a/Rendering/OpenGL2/vtkPointFillPass.cxx b/Rendering/OpenGL2/vtkPointFillPass.cxx
+index a4e7a2eb..5ec502d3 100644
+--- a/Rendering/OpenGL2/vtkPointFillPass.cxx
++++ b/Rendering/OpenGL2/vtkPointFillPass.cxx
+@@ -158,6 +158,7 @@ void vtkPointFillPass::Render(const vtkRenderState* s)
+   offset[0] = 1.0 / width;
+   offset[1] = 1.0 / height;
+   this->QuadHelper->Program->SetUniform2f("pixelToTCoord", offset);
++  this->QuadHelper->Program->SetUniformi("reverseZ", renWin->GetUseReverseZ() ? 1 : 0);
+ 
+   this->QuadHelper->Render();
+   this->Pass1->Deactivate();
+diff --git a/Rendering/OpenGL2/vtkSSAOPass.cxx b/Rendering/OpenGL2/vtkSSAOPass.cxx
+index c2847900..aac86e07 100644
+--- a/Rendering/OpenGL2/vtkSSAOPass.cxx
++++ b/Rendering/OpenGL2/vtkSSAOPass.cxx
+@@ -271,7 +271,9 @@ void vtkSSAOPass::RenderDelegate(const vtkRenderState* s, int w, int h)
+ 
+     if (!glRen->GetPreserveDepthBuffer())
+     {
+-      ostate->vtkglClearDepth(static_cast<GLclampf>(1.0));
++      // the far plane: 0 in reversed depth (vtkRenderWindow::UseReverseZ)
++      const bool reverseZ = glRen->GetRenderWindow() && glRen->GetRenderWindow()->GetUseReverseZ();
++      ostate->vtkglClearDepth(static_cast<GLclampf>(reverseZ ? 0.0 : 1.0));
+       clear_mask |= GL_DEPTH_BUFFER_BIT;
+       ostate->vtkglDepthMask(GL_TRUE);
+     }
+@@ -322,7 +324,8 @@ void vtkSSAOPass::RenderSSAO(vtkOpenGLRenderWindow* renWin, vtkMatrix4x4* projec
+            << this->KernelSize
+            << "];\n"
+               "uniform mat4 matProjection;\n"
+-              "uniform ivec2 size;\n";
++              "uniform ivec2 size;\n"
++              "uniform int reverseZ;\n";
+ 
+     vtkShaderProgram::Substitute(FSSource, "//VTK::FSQ::Decl", ssDecl.str());
+ 
+@@ -332,6 +335,11 @@ void vtkSSAOPass::RenderSSAO(vtkOpenGLRenderWindow* renWin, vtkMatrix4x4* projec
+       << "\n"
+          "  float occlusion = 0.0;\n"
+          "  float depth = texture(texDepth, texCoord).r;\n"
++         // reversed depth (vtkRenderWindow::UseReverseZ) to the conventional one of matProjection
++         "  if (reverseZ != 0)\n"
++         "  {\n"
++         "    depth = 1.0 - depth;\n"
++         "  }\n"
+          "  if (depth > 0.0 && depth < 1.0)\n" // discard background and overlay
+          "  {\n"
+          "    vec3 fragPosVC = texture(texPosition, texCoord).xyz;\n"
+@@ -402,6 +410,7 @@ void vtkSSAOPass::RenderSSAO(vtkOpenGLRenderWindow* renWin, vtkMatrix4x4* projec
+ 
+   int size[2] = { w, h };
+   this->SSAOQuadHelper->Program->SetUniform2i("size", size);
++  this->SSAOQuadHelper->Program->SetUniformi("reverseZ", renWin->GetUseReverseZ() ? 1 : 0);
+ 
+   this->FrameBufferObject->GetContext()->GetState()->PushFramebufferBindings();
+   this->FrameBufferObject->Bind();
+@@ -493,7 +502,7 @@ void vtkSSAOPass::RenderCombine(vtkOpenGLRenderWindow* renWin)
+   this->CombineQuadHelper->Program->SetUniformi("texDepth", this->DepthTexture->GetTextureUnit());
+ 
+   ostate->vtkglEnable(GL_DEPTH_TEST);
+-  ostate->vtkglDepthFunc(GL_LEQUAL);
++  ostate->vtkglDepthFunc(renWin->GetUseReverseZ() ? GL_GEQUAL : GL_LEQUAL);
+   ostate->vtkglClear(GL_DEPTH_BUFFER_BIT);
+ 
+   this->CombineQuadHelper->Render();
+@@ -675,10 +684,12 @@ bool vtkSSAOPass::PostReplaceShaderValues(std::string& vtkNotUsed(vertexShader),
+                 "}";
+     vtkShaderProgram::Substitute(fragmentShader, "//VTK::SSAO::Impl", ssaoImpl.str(), false);
+ 
++    // reversed depth (vtkRenderWindow::UseReverseZ, in_reverseZ): the far plane at 0, and NDC z
++    // in [0, 1] runs over the depth range as it is
+     vtkShaderProgram::Substitute(fragmentShader, "//VTK::SSAO::Exit",
+       "if (l_ssaoFragPos == vec3(-1.0))\n"
+       "{\n"
+-      "  gl_FragDepth = 1.0;\n"
++      "  gl_FragDepth = in_reverseZ ? 0.0 : 1.0;\n"
+       "}\n"
+       "else\n"
+       "{\n"
+@@ -686,7 +697,8 @@ bool vtkSSAOPass::PostReplaceShaderValues(std::string& vtkNotUsed(vertexShader),
+       "                    in_volumeMatrix[0] * in_textureDatasetMatrix[0] *\n"
+       "                    vec4(l_ssaoFragPos, 1.0);\n"
+       "  depthValue /= depthValue.w;\n"
+-      "  gl_FragDepth = 0.5 * (gl_DepthRange.far - gl_DepthRange.near) * depthValue.z + 0.5 * "
++      "  gl_FragDepth = in_reverseZ ? gl_DepthRange.diff * depthValue.z + gl_DepthRange.near : "
++      "0.5 * (gl_DepthRange.far - gl_DepthRange.near) * depthValue.z + 0.5 * "
+       "(gl_DepthRange.far + gl_DepthRange.near);\n"
+       "  gl_FragData[1] = in_modelViewMatrix * in_volumeMatrix[0] * in_textureDatasetMatrix[0] * "
+       "vec4(l_ssaoFragPos, 1.0);\n"
+diff --git a/Rendering/OpenGL2/vtkShadowMapBakerPass.cxx b/Rendering/OpenGL2/vtkShadowMapBakerPass.cxx
+index 47a637d3..861dc222 100644
+--- a/Rendering/OpenGL2/vtkShadowMapBakerPass.cxx
++++ b/Rendering/OpenGL2/vtkShadowMapBakerPass.cxx
+@@ -566,7 +566,7 @@ void vtkShadowMapBakerPass::Render(const vtkRenderState* s)
+ 
+       ostate->vtkglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+       ostate->vtkglEnable(GL_DEPTH_TEST);
+-      ostate->vtkglDepthFunc(GL_LEQUAL);
++      ostate->vtkglDepthFunc(context->GetUseReverseZ() ? GL_GEQUAL : GL_LEQUAL);
+ 
+       r->SetAutomaticLightCreation(autoLight);
+ 
+@@ -591,6 +591,8 @@ bool vtkShadowMapBakerPass::SetShaderParameters(vtkShaderProgram* program, vtkAb
+   program->SetUniformf("depthC", ExponentialConstant);
+   program->SetUniformf("nearZ", crange[0]);
+   program->SetUniformf("farZ", crange[1]);
++  program->SetUniformi(
++    "shadowMapReverseZ", this->FrameBufferObject->GetContext()->GetUseReverseZ() ? 1 : 0);
+ 
+   // clipz = (2.0*frag.z - 1)/frag.w
+   // Eyez = 2fn/(- f - n) + (f - n)*clipz/( - f - n);
+@@ -614,11 +616,14 @@ bool vtkShadowMapBakerPass::PreReplaceShaderValues(
+     "//VTK::Light::Dec\n"
+     "uniform float nearZ;\n"
+     "uniform float farZ;\n"
+-    "uniform float depthC;\n",
++    "uniform float depthC;\n"
++    "uniform int shadowMapReverseZ;\n",
+     false);
++  // the map stores the conventional depth, 0 at the near plane: reversed (vtkRenderWindow::
++  // UseReverseZ, shadowMapReverseZ), the light camera's runs from 1 there
+   vtkShaderProgram::Substitute(fragmentShader, "//VTK::Light::Impl",
+     "//VTK::Light::Impl\n"
+-    "float ldepth =  gl_FragCoord.z;\n" // parallel proj
++    "float ldepth = shadowMapReverseZ != 0 ? 1.0 - gl_FragCoord.z : gl_FragCoord.z;\n" // parallel
+     "if (cameraParallel == 0) { ldepth =  (1.0/gl_FragCoord.w - nearZ)/(farZ - nearZ); }\n"
+     //"gl_FragData[0].r = ldepth;\n",
+     "gl_FragData[0].r = exp(depthC * ldepth);\n",
+diff --git a/Rendering/OpenGL2/vtkValuePass.cxx b/Rendering/OpenGL2/vtkValuePass.cxx
+index bb7e5d44..da135a85 100644
+--- a/Rendering/OpenGL2/vtkValuePass.cxx
++++ b/Rendering/OpenGL2/vtkValuePass.cxx
+@@ -549,8 +549,9 @@ void vtkValuePass::BeginPass(vtkRenderer* ren)
+       break;
+   }
+ 
+-  // Clear buffers
+-  ostate->vtkglClearDepth(1.0);
++  // Clear buffers, the depth to the far plane: 0 in reversed depth (vtkRenderWindow::UseReverseZ)
++  ostate->vtkglClearDepth(
++    ren->GetRenderWindow() && ren->GetRenderWindow()->GetUseReverseZ() ? 0.0 : 1.0);
+   if (this->RenderingMode == vtkValuePass::FLOATING_POINT)
+   {
+     ostate->vtkglClearColor(vtkMath::Nan(), vtkMath::Nan(), vtkMath::Nan(), 0.0);
+diff --git a/Rendering/Volume/vtkFixedPointVolumeRayCastMapper.cxx b/Rendering/Volume/vtkFixedPointVolumeRayCastMapper.cxx
+index eb1aface..a802036a 100644
+--- a/Rendering/Volume/vtkFixedPointVolumeRayCastMapper.cxx
++++ b/Rendering/Volume/vtkFixedPointVolumeRayCastMapper.cxx
+@@ -1340,6 +1340,18 @@ void vtkFixedPointVolumeRayCastMapper::CaptureZBuffer(vtkRenderer* ren)
+     // Capture the z buffer
+     ren->GetRenderWindow()->GetZbufferData(x1, y1, x2, y2, this->RayCastImage->GetZBuffer());
+ 
++    // The rays are cast in conventional depth, 0 at the near plane and 1 at the far one: reversed
++    // depth (vtkRenderWindow::UseReverseZ) is 1 - that
++    if (ren->GetRenderWindow()->GetUseReverseZ())
++    {
++      float* zbuffer = this->RayCastImage->GetZBuffer();
++      const vtkIdType n = static_cast<vtkIdType>(zbufferSize[0]) * zbufferSize[1];
++      for (vtkIdType i = 0; i < n; ++i)
++      {
++        zbuffer[i] = 1.0f - zbuffer[i];
++      }
++    }
++
+     this->RayCastImage->UseZBufferOn();
+   }
+   else
+diff --git a/Rendering/Volume/vtkRayCastImageDisplayHelper.h b/Rendering/Volume/vtkRayCastImageDisplayHelper.h
+index 5ba7884f..35d74685 100644
+--- a/Rendering/Volume/vtkRayCastImageDisplayHelper.h
++++ b/Rendering/Volume/vtkRayCastImageDisplayHelper.h
+@@ -32,6 +32,12 @@ public:
+   vtkTypeMacro(vtkRayCastImageDisplayHelper, vtkObject);
+   void PrintSelf(ostream& os, vtkIndent indent) override;
+ 
++  ///@{
++  /**
++   * Draw the image at requestedDepth, a depth in (0, 1] that runs from 0 at the near plane to 1 at
++   * the far one also when the window's depth is reversed (vtkRenderWindow::UseReverseZ); any other
++   * value draws it about the depth of the volume's center.
++   */
+   virtual void RenderTexture(vtkVolume* vol, vtkRenderer* ren, int imageMemorySize[2],
+     int imageViewportSize[2], int imageInUseSize[2], int imageOrigin[2], float requestedDepth,
+     unsigned char* image) = 0;
+@@ -42,6 +48,7 @@ public:
+ 
+   virtual void RenderTexture(
+     vtkVolume* vol, vtkRenderer* ren, vtkFixedPointRayCastImage* image, float requestedDepth) = 0;
++  ///@}
+ 
+   vtkSetClampMacro(PreMultipliedColors, vtkTypeBool, 0, 1);
+   vtkGetMacro(PreMultipliedColors, vtkTypeBool);
+diff --git a/Rendering/Volume/vtkUnstructuredGridVolumeRayCastMapper.cxx b/Rendering/Volume/vtkUnstructuredGridVolumeRayCastMapper.cxx
+index 75850313..cc0811c5 100644
+--- a/Rendering/Volume/vtkUnstructuredGridVolumeRayCastMapper.cxx
++++ b/Rendering/Volume/vtkUnstructuredGridVolumeRayCastMapper.cxx
+@@ -364,6 +364,17 @@ void vtkUnstructuredGridVolumeRayCastMapper::Render(vtkRenderer* ren, vtkVolume*
+ 
+     // Capture the z buffer
+     this->ZBuffer = ren->GetRenderWindow()->GetZbufferData(x1, y1, x2, y2);
++
++    // The rays are cast in conventional depth, 0 at the near plane and 1 at the far one: reversed
++    // depth (vtkRenderWindow::UseReverseZ) is 1 - that
++    if (this->ZBuffer && ren->GetRenderWindow()->GetUseReverseZ())
++    {
++      const vtkIdType n = static_cast<vtkIdType>(this->ZBufferSize[0]) * this->ZBufferSize[1];
++      for (vtkIdType i = 0; i < n; ++i)
++      {
++        this->ZBuffer[i] = 1.0f - this->ZBuffer[i];
++      }
++    }
+   }
+ 
+   this->RayCastFunction->Initialize(ren, vol);
+diff --git a/Rendering/Volume/vtkUnstructuredGridVolumeZSweepMapper.cxx b/Rendering/Volume/vtkUnstructuredGridVolumeZSweepMapper.cxx
+index 7f70bc75..329ba42e 100644
+--- a/Rendering/Volume/vtkUnstructuredGridVolumeZSweepMapper.cxx
++++ b/Rendering/Volume/vtkUnstructuredGridVolumeZSweepMapper.cxx
+@@ -2721,6 +2721,17 @@ void vtkUnstructuredGridVolumeZSweepMapper::Render(vtkRenderer* ren, vtkVolume*
+ 
+     // Capture the z buffer
+     this->ZBuffer = ren->GetRenderWindow()->GetZbufferData(x1, y1, x2, y2);
++
++    // The sweep runs in conventional depth, 0 at the near plane and 1 at the far one: reversed
++    // depth (vtkRenderWindow::UseReverseZ) is 1 - that
++    if (this->ZBuffer && ren->GetRenderWindow()->GetUseReverseZ())
++    {
++      const vtkIdType n = static_cast<vtkIdType>(this->ZBufferSize[0]) * this->ZBufferSize[1];
++      for (vtkIdType i = 0; i < n; ++i)
++      {
++        this->ZBuffer[i] = 1.0f - this->ZBuffer[i];
++      }
++    }
+   }
+ 
+   this->RealRayIntegrator->Initialize(vol, this->Scalars);
+diff --git a/Rendering/VolumeOpenGL2/shaders/raycasterfs.glsl b/Rendering/VolumeOpenGL2/shaders/raycasterfs.glsl
+index 356c45d4..d754297d 100644
+--- a/Rendering/VolumeOpenGL2/shaders/raycasterfs.glsl
++++ b/Rendering/VolumeOpenGL2/shaders/raycasterfs.glsl
+@@ -159,8 +159,17 @@ vec4 WindowToNDC(const float xCoord, const float yCoord, const float zCoord)
+     in_inverseWindowSize.x - 1.0;
+   NDCCoord.y = (yCoord - in_windowLowerLeftCorner.y) * 2.0 *
+     in_inverseWindowSize.y - 1.0;
+-  NDCCoord.z = (2.0 * zCoord - (gl_DepthRange.near + gl_DepthRange.far)) /
+-    gl_DepthRange.diff;
++  if (in_reverseZ)
++  {
++    // reversed depth clips NDC z to [0, 1] (near plane at 1), and the window
++    // depth runs over the depth range from NDC z itself
++    NDCCoord.z = (zCoord - gl_DepthRange.near) / gl_DepthRange.diff;
++  }
++  else
++  {
++    NDCCoord.z = (2.0 * zCoord - (gl_DepthRange.near + gl_DepthRange.far)) /
++      gl_DepthRange.diff;
++  }
+ 
+   return NDCCoord;
+ }
+@@ -176,8 +185,15 @@ vec4 NDCToWindow(const float xNDC, const float yNDC, const float zNDC)
+     in_windowLowerLeftCorner.x;
+   WinCoord.y = (yNDC + 1.f) / (2.f * in_inverseWindowSize.y) +
+     in_windowLowerLeftCorner.y;
+-  WinCoord.z = (zNDC * gl_DepthRange.diff +
+-    (gl_DepthRange.near + gl_DepthRange.far)) / 2.f;
++  if (in_reverseZ)
++  {
++    WinCoord.z = zNDC * gl_DepthRange.diff + gl_DepthRange.near;
++  }
++  else
++  {
++    WinCoord.z = (zNDC * gl_DepthRange.diff +
++      (gl_DepthRange.near + gl_DepthRange.far)) / 2.f;
++  }
+ 
+   return WinCoord;
+ }
+diff --git a/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.cxx b/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.cxx
+index a7ee6e05..70d9cdc7 100644
+--- a/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.cxx
++++ b/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.cxx
+@@ -785,6 +785,26 @@ void vtkOpenGLGPUVolumeRayCastMapper::vtkInternal::CaptureDepthTexture(vtkRender
+   }
+ 
+   vtkOpenGLRenderWindow* orenWin = vtkOpenGLRenderWindow::SafeDownCast(ren->GetRenderWindow());
++
++  // reversed depth (vtkRenderWindow::UseReverseZ) is in floats, and a blit of depth needs the
++  // same format on both sides: the copy is made again when the window's depth changed
++  const bool reverseZ = orenWin->GetUseReverseZ();
++  if (this->DepthTextureObject->GetHandle())
++  {
++    const unsigned int format = this->DepthTextureObject->GetInternalFormat();
++    const bool floatDepth = format == GL_DEPTH_COMPONENT32F || format == GL_DEPTH32F_STENCIL8;
++    if (floatDepth != reverseZ)
++    {
++      if (this->DepthCopyFBO)
++      {
++        this->DepthCopyFBO->ReleaseGraphicsResources(orenWin);
++        this->DepthCopyFBO->Delete();
++        this->DepthCopyFBO = nullptr;
++      }
++      this->DepthTextureObject->ReleaseGraphicsResources(orenWin);
++    }
++  }
++
+   this->DepthTextureObject->SetContext(orenWin);
+   this->DepthCopyColorTextureObject->SetContext(orenWin);
+ 
+@@ -806,7 +826,13 @@ void vtkOpenGLGPUVolumeRayCastMapper::vtkInternal::CaptureDepthTexture(vtkRender
+ 
+     if (orenWin->GetStencilCapable())
+     {
+-      this->DepthTextureObject->AllocateDepthStencil(this->WindowSize[0], this->WindowSize[1]);
++      this->DepthTextureObject->AllocateDepthStencil(
++        this->WindowSize[0], this->WindowSize[1], reverseZ);
++    }
++    else if (reverseZ)
++    {
++      this->DepthTextureObject->AllocateDepth(
++        this->WindowSize[0], this->WindowSize[1], vtkTextureObject::Float32);
+     }
+     else
+     {
+@@ -1972,6 +1998,11 @@ void vtkOpenGLGPUVolumeRayCastMapper::vtkInternal::SetupRenderToTexture(vtkRende
+     this->FBO->CheckFrameBufferStatus(GL_FRAMEBUFFER);
+ 
+     this->FBO->GetContext()->GetState()->vtkglClearColor(1.0, 1.0, 1.0, 0.0);
++    if (renWin->GetUseReverseZ())
++    {
++      // clear to the far plane: 0 in reversed depth (vtkRenderWindow::UseReverseZ)
++      this->FBO->GetContext()->GetState()->vtkglClearDepth(0.0);
++    }
+     this->FBO->GetContext()->GetState()->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   }
+ }
+@@ -2057,6 +2088,11 @@ void vtkOpenGLGPUVolumeRayCastMapper::vtkInternal::SetupDepthPass(vtkRenderer* r
+ 
+   vtkOpenGLState* ostate = this->DPFBO->GetContext()->GetState();
+   ostate->vtkglClearColor(0.0, 0.0, 0.0, 0.0);
++  if (renWin->GetUseReverseZ())
++  {
++    // clear to the far plane: 0 in reversed depth (vtkRenderWindow::UseReverseZ)
++    ostate->vtkglClearDepth(0.0);
++  }
+   ostate->vtkglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   ostate->vtkglEnable(GL_DEPTH_TEST);
+ }
+@@ -3716,6 +3752,11 @@ void vtkOpenGLGPUVolumeRayCastMapper::vtkInternal::SetCameraShaderParameters(
+   prog->SetUniformMatrix("in_projectionMatrix", projectionMatrix);
+   prog->SetUniformMatrix("in_inverseProjectionMatrix", this->InverseProjectionMat.GetPointer());
+ 
++  // the projection maps the near plane to 1 and the far one to 0 when the window's depth is
++  // reversed (vtkRenderWindow::UseReverseZ), and so do the depth buffer and the depth written
++  vtkRenderWindow* renWin = ren->GetRenderWindow();
++  prog->SetUniformi("in_reverseZ", renWin && renWin->GetUseReverseZ() ? 1 : 0);
++
+   this->InverseModelViewMat->DeepCopy(modelViewMatrix);
+   this->InverseModelViewMat->Invert();
+   prog->SetUniformMatrix("in_modelViewMatrix", modelViewMatrix);
+diff --git a/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.h b/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.h
+index da912f0e..8e6f52cb 100644
+--- a/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.h
++++ b/Rendering/VolumeOpenGL2/vtkOpenGLGPUVolumeRayCastMapper.h
+@@ -94,7 +94,9 @@ public:
+   // Low level API to enable access to depth texture in
+   // RenderToTexture mode. It will return either nullptr if
+   // RenderToImage was never turned on or texture captured
+-  // the last time RenderToImage was on.
++  // the last time RenderToImage was on. Its depth runs as the
++  // window's: from 1 at the near plane to 0 at the far one
++  // when vtkRenderWindow::UseReverseZ is on.
+   vtkTextureObject* GetDepthTexture();
+ 
+   // Description:
+@@ -106,7 +108,7 @@ public:
+ 
+   // Description:
+   // Low level API to export the depth texture as vtkImageData in
+-  // RenderToImage mode.
++  // RenderToImage mode (see GetDepthTexture).
+   void GetDepthImage(vtkImageData* im) override;
+ 
+   // Description:
+diff --git a/Rendering/VolumeOpenGL2/vtkOpenGLProjectedTetrahedraMapper.cxx b/Rendering/VolumeOpenGL2/vtkOpenGLProjectedTetrahedraMapper.cxx
+index 48831cda..1cb34c53 100644
+--- a/Rendering/VolumeOpenGL2/vtkOpenGLProjectedTetrahedraMapper.cxx
++++ b/Rendering/VolumeOpenGL2/vtkOpenGLProjectedTetrahedraMapper.cxx
+@@ -176,6 +176,19 @@ bool vtkOpenGLProjectedTetrahedraMapper::AllocateFOResources(vtkRenderer* r)
+ 
+   const int* size = r->GetSize();
+ 
++  // reversed depth (vtkRenderWindow::UseReverseZ) is in floats, and the window's depth is blitted
++  // into the framebuffer, which needs the same format: it is made again when the depth changed
++  const bool reverseZ = r->GetRenderWindow()->GetUseReverseZ();
++  if (this->FloatingPointFrameBufferResourcesAllocated)
++  {
++    vtkTextureObject* depth = this->Framebuffer->GetDepthAttachmentAsTextureObject();
++    if (depth && (depth->GetInternalFormat() == GL_DEPTH_COMPONENT32F) != reverseZ)
++    {
++      this->FloatingPointFrameBufferResourcesAllocated = false;
++      this->Framebuffer->ReleaseGraphicsResources(r->GetRenderWindow());
++    }
++  }
++
+   if (this->UseFloatingPointFrameBuffer && this->CanDoFloatingPointFrameBuffer &&
+     (!this->FloatingPointFrameBufferResourcesAllocated || (size[0] != this->CurrentFBOWidth) ||
+       (size[0] != this->CurrentFBOHeight)))
+@@ -208,17 +221,19 @@ bool vtkOpenGLProjectedTetrahedraMapper::AllocateFOResources(vtkRenderer* r)
+       // if we failed to get a framebuffer and we wanted
+       // multisamples, then try again without multisamples
+       if (!fo->PopulateFramebuffer(size[0], size[1],
+-            true,         // use textures
+-            1, VTK_FLOAT, // 1 color buffer of float
+-            true, dsize,  // yes depth buffer
+-            winSamples)   // possibly multisampled
++            true,            // use textures
++            1, VTK_FLOAT,    // 1 color buffer of float
++            true, dsize,     // yes depth buffer
++            winSamples,      // possibly multisampled
++            false, reverseZ) // no stencil, depth in floats when reversed
+         && winSamples > 0)
+       {
+         fo->PopulateFramebuffer(size[0], size[1],
+-          true,         // use textures
+-          1, VTK_FLOAT, // 1 color buffer of float
+-          true, dsize,  // yes depth buffer
+-          0);           // no multisamples
++          true,             // use textures
++          1, VTK_FLOAT,     // 1 color buffer of float
++          true, dsize,      // yes depth buffer
++          0,                // no multisamples
++          false, reverseZ); // no stencil, depth in floats when reversed
+       }
+ 
+       this->FloatingPointFrameBufferResourcesAllocated = true;
+@@ -672,6 +687,12 @@ void vtkOpenGLProjectedTetrahedraMapper::ProjectTetrahedra(
+ 
+   float unit_distance = volume->GetProperty()->GetScalarOpacityUnitDistance();
+ 
++  // NDC z runs from -1 at the near plane to 1 at the far one, or from 1 to 0 when the depth is
++  // reversed (vtkRenderWindow::UseReverseZ)
++  const bool reverseZ = renderWindow->GetUseReverseZ();
++  auto beyondFar = [reverseZ](float z) { return reverseZ ? z < 0.0f : z > 1.0f; };
++  auto beforeNear = [reverseZ](float z) { return reverseZ ? z > 1.0f : z < -1.0f; };
++
+   // build the VBO and IBOs, we do these in chunks as based on
+   // the settings of the VisibilitySort tclass
+   this->VBO->SetStride(6 * sizeof(float));
+@@ -766,10 +787,10 @@ void vtkOpenGLProjectedTetrahedraMapper::ProjectTetrahedra(
+           (tet_points[2 * 3 + 1] > 1.0f) && (tet_points[3 * 3 + 1] > 1.0f)) ||
+         ((tet_points[0 * 3 + 1] < -1.0f) && (tet_points[1 * 3 + 1] < -1.0f) &&
+           (tet_points[2 * 3 + 1] < -1.0f) && (tet_points[3 * 3 + 1] < -1.0f)) ||
+-        ((tet_points[0 * 3 + 2] > 1.0f) && (tet_points[1 * 3 + 2] > 1.0f) &&
+-          (tet_points[2 * 3 + 2] > 1.0f) && (tet_points[3 * 3 + 2] > 1.0f)) ||
+-        ((tet_points[0 * 3 + 2] < -1.0f) || (tet_points[1 * 3 + 2] < -1.0f) ||
+-          (tet_points[2 * 3 + 2] < -1.0f) || (tet_points[3 * 3 + 2] < -1.0f)))
++        (beyondFar(tet_points[0 * 3 + 2]) && beyondFar(tet_points[1 * 3 + 2]) &&
++          beyondFar(tet_points[2 * 3 + 2]) && beyondFar(tet_points[3 * 3 + 2])) ||
++        (beforeNear(tet_points[0 * 3 + 2]) || beforeNear(tet_points[1 * 3 + 2]) ||
++          beforeNear(tet_points[2 * 3 + 2]) || beforeNear(tet_points[3 * 3 + 2])))
+       {
+         continue;
+       }
+diff --git a/Rendering/VolumeOpenGL2/vtkOpenGLRayCastImageDisplayHelper.cxx b/Rendering/VolumeOpenGL2/vtkOpenGLRayCastImageDisplayHelper.cxx
+index 943b1072..f84d54cf 100644
+--- a/Rendering/VolumeOpenGL2/vtkOpenGLRayCastImageDisplayHelper.cxx
++++ b/Rendering/VolumeOpenGL2/vtkOpenGLRayCastImageDisplayHelper.cxx
+@@ -102,10 +102,14 @@ void vtkOpenGLRayCastImageDisplayHelper::RenderTextureInternal(vtkVolume* vol, v
+ 
+   float offsetX, offsetY;
+ 
++  // The quad is drawn in NDC. Reversed depth (vtkRenderWindow::UseReverseZ) clips NDC z to [0, 1],
++  // 1 at the near plane, and the window depth is NDC z itself.
++  const bool reverseZ = ctx->GetUseReverseZ();
+   float depth;
+   if (requestedDepth > 0.0 && requestedDepth <= 1.0)
+   {
+-    depth = requestedDepth * 2.0 - 1.0;
++    // the requested depth is a conventional one, 0 at the near plane and 1 at the far one
++    depth = reverseZ ? 1.0 - requestedDepth : requestedDepth * 2.0 - 1.0;
+   }
+   else
+   {
+@@ -116,6 +120,13 @@ void vtkOpenGLRayCastImageDisplayHelper::RenderTextureInternal(vtkVolume* vol, v
+     ren->SetWorldPoint(vol->GetCenter()[0], vol->GetCenter()[1], vol->GetCenter()[2], 1.0);
+     ren->WorldToDisplay();
+     depth = ren->GetDisplayPoint()[2];
++    if (reverseZ)
++    {
++      // the conventional branch takes the display depth d for NDC z, which puts the quad at the
++      // window depth 0.5 * d + 0.5; the reversed display depth is 1 - d, and the same window depth
++      // reversed is 1 - (0.5 * d + 0.5), half the reversed display depth
++      depth *= 0.5;
++    }
+   }
+ 
+   // Don't write into the Zbuffer - just use it for comparisons
+diff --git a/Rendering/VolumeOpenGL2/vtkVolumeShaderComposer.h b/Rendering/VolumeOpenGL2/vtkVolumeShaderComposer.h
+index b7e0bd27..442b6366 100644
+--- a/Rendering/VolumeOpenGL2/vtkVolumeShaderComposer.h
++++ b/Rendering/VolumeOpenGL2/vtkVolumeShaderComposer.h
+@@ -241,6 +241,9 @@ inline std::string BaseDeclarationFragment(vtkRenderer* vtkNotUsed(ren), vtkVolu
+                  "uniform vec3 in_textureExtentsMax;\n"
+                  "uniform vec3 in_textureExtentsMin;\n"
+                  "\n"
++                 "// Whether depth runs from 1 at the near plane to 0 at the far one\n"
++                 "uniform bool in_reverseZ;\n"
++                 "\n"
+                  "// Material and lighting\n"
+                  "uniform vec3 in_diffuse[4];\n"
+                  "uniform vec3 in_ambient[4];\n"
+@@ -3239,8 +3242,8 @@ inline std::string TerminationInit(
+       \n  g_terminatePointMax = 0.0;\
+       \n\
+       \n  vec4 l_depthValue = texture2D(in_depthSampler, fragTexCoord);\
+-      \n  // Depth test\
+-      \n  if(gl_FragCoord.z >= l_depthValue.x)\
++      \n  // Depth test (reversed depth is the smaller the farther)\
++      \n  if(in_reverseZ ? gl_FragCoord.z <= l_depthValue.x : gl_FragCoord.z >= l_depthValue.x)\
+       \n    {\
+       \n    discard;\
+       \n    }\
+@@ -3266,7 +3269,7 @@ inline std::string TerminationInit(
+           \n  vec4 intersDC = in_projectionMatrix * in_modelViewMatrix * in_volumeMatrix[0] * intersection;\
+           \n  intersDC.xyz /= intersDC.w;\
+           \n  vec4 intersWin = NDCToWindow(intersDC.x, intersDC.y, intersDC.z);\
+-          \n  if(intersWin.z >= l_depthValue.x)\
++          \n  if(in_reverseZ ? intersWin.z <= l_depthValue.x : intersWin.z >= l_depthValue.x)\
+           \n  {\
+           \n    discard;\
+           \n  }\
+@@ -3836,7 +3839,8 @@ inline std::string RenderToImageExit(
+   return std::string("\
+     \n  if (l_opaqueFragPos == vec3(-1.0))\
+     \n    {\
+-    \n    gl_FragData[1] = vec4(1.0);\
++    \n    // the far plane, 0 in reversed depth\
++    \n    gl_FragData[1] = vec4(vec3(in_reverseZ ? 0.0 : 1.0), 1.0);\
+     \n    }\
+     \n  else\
+     \n    {\
+@@ -3844,9 +3848,12 @@ inline std::string RenderToImageExit(
+     \n                      in_volumeMatrix[0] * in_textureDatasetMatrix[0] *\
+     \n                      vec4(l_opaqueFragPos, 1.0);\
+     \n    depthValue /= depthValue.w;\
+-    \n    gl_FragData[1] = vec4(vec3(0.5 * (gl_DepthRange.far -\
+-    \n                       gl_DepthRange.near) * depthValue.z + 0.5 *\
+-    \n                      (gl_DepthRange.far + gl_DepthRange.near)), 1.0);\
++    \n    // NDC z of reversed depth is in [0, 1] already\
++    \n    float windowZ = in_reverseZ ?\
++    \n      gl_DepthRange.diff * depthValue.z + gl_DepthRange.near :\
++    \n      0.5 * (gl_DepthRange.far - gl_DepthRange.near) * depthValue.z + 0.5 *\
++    \n      (gl_DepthRange.far + gl_DepthRange.near);\
++    \n    gl_FragData[1] = vec4(vec3(windowZ), 1.0);\
+     \n    }");
+ }
+ 
+@@ -3879,7 +3886,9 @@ inline std::string DepthPassExit(
+     \n                  in_volumeMatrix[0] * in_textureDatasetMatrix[0] *\
+     \n                  vec4(l_isoPos, 1.0);\
+     \n  gl_FragData[0] = vec4(l_isoPos, 1.0);\
+-    \n  gl_FragData[1] = vec4(vec3((depthValue.z/depthValue.w) * 0.5 + 0.5),\
++    \n  // NDC z of reversed depth is in [0, 1] already\
++    \n  float ndcZ = depthValue.z/depthValue.w;\
++    \n  gl_FragData[1] = vec4(vec3(in_reverseZ ? ndcZ : ndcZ * 0.5 + 0.5),\
+     \n                        1.0);");
+ }
+ 
+-- 
+2.55.0.windows.3
+

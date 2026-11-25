@@ -516,4 +516,248 @@ public class SignatureMapperTests
     // Assert
     Assert.That(mapped.Skip, Is.EqualTo("std type std::shared_ptr"));
   }
+
+  [Test]
+  public void Field_WidthTypedef_IsSpelledByItsName()
+  {
+    // Arrange (vtkIdType: VtkObjects.i's typemaps match the name)
+    var type = new BuiltinType("long long", Written: "vtkIdType");
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("vtkIdType"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("long"));
+    }
+  }
+
+  [Test]
+  public void Field_VtkObject_IsAConstPointer()
+  {
+    // Arrange
+    var type = Pointer(Class("vtkTransform"));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert (read only, its getter adds a reference for the proxy: VtkObjects.i)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("vtkTransform* const"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("vtkTransform"));
+      Assert.That(mapped.Type?.Uses.Select(u => u.Package),
+                  Is.EqualTo(new[] { "CommonTransforms" }));
+    }
+  }
+
+  [Test]
+  public void Field_PointerToAValueClass_IsAProxyThatBorrows()
+  {
+    // Arrange
+    var type = Pointer(Class("vtkVariant"));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert (read only: References.i's getter keeps the owner's proxy alive)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("vtkVariant* const"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("vtkVariant"));
+    }
+  }
+
+  [TestCase("void", false, "void*")]
+  [TestCase("void", true, "const void*")]
+  [TestCase("int", false, "void* const")]
+  [TestCase("vtkVector3d", false, "void* const")]
+  public void Field_OtherPointer_IsAnAddress(string pointee, bool isConst, string spelling)
+  {
+    // Arrange (a void* read and written; any other pointer read only)
+    CppType target = pointee == "vtkVector3d" ? Class(pointee) : Builtin(pointee);
+    var type = Pointer(isConst ? Const(target) : target);
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo(spelling));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("global::System.IntPtr"));
+    }
+  }
+
+  [TestCase(false)]
+  [TestCase(true)]
+  public void Field_CString_IsAReadOnlyString(bool isConst)
+  {
+    // Arrange (C# can't tell who owns the text)
+    var type = Pointer(isConst ? Const(Builtin("char")) : Builtin("char"));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("const char* const"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("string"));
+    }
+  }
+
+  [Test]
+  public void Field_CArrayOfNumbers_IsACSharpArray()
+  {
+    // Arrange
+    var type = new ArrayType(new BuiltinType("long long", Written: "vtkIdType"), 3);
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert (declared as C++ has it, which Types.i's typemaps copy both ways)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Declare("Ids"), Is.EqualTo("vtkIdType Ids[3]"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("long[]"));
+    }
+  }
+
+  [TestCase("bool")]
+  [TestCase("char")]
+  [TestCase("size_t")]
+  public void Field_CArrayOfOtherElements_IsSkipped(string element)
+  {
+    // Arrange (bool and char arrays marshal through other typemaps; size_t has no fixed width)
+    var type = new ArrayType(Builtin(element), 4);
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    Assert.That(mapped.Skip, Does.StartWith($"a field of {element}[4]: "));
+  }
+
+  [TestCase("vtkVector3d", "CommonDataModel")]
+  [TestCase("vtkVariant", "CommonCore")]
+  public void Field_StructOrValueClass_IsACopy(string name, string package)
+  {
+    // Arrange
+    var type = Class(name);
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo(name));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo(name));
+      Assert.That(mapped.Type?.Uses.Select(u => u.Package), Is.EqualTo(new[] { package }));
+    }
+  }
+
+  [Test]
+  public void Field_PlainClass_IsSkipped()
+  {
+    // Arrange (no copy for the property)
+    var type = Class("vtkTimerLogScope");
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    Assert.That(mapped.Type, Is.Null);
+  }
+
+  [Test]
+  public void Field_SmartPointer_IsTheObject()
+  {
+    // Arrange
+    var type = SmartPointer("vtkTransform");
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert (read and written: the field counts a reference)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("vtkSmartPointer<vtkTransform>"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("vtkTransform"));
+    }
+  }
+
+  [Test]
+  public void Field_String_IsAString()
+  {
+    // Arrange (std::string as libclang spells it)
+    var type = Template("std::basic_string", Builtin("char"),
+                        Template("std::char_traits", Builtin("char")),
+                        Template("std::allocator", Builtin("char")));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert (Strings.i's typemaps, which a property reads and writes through)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("std::string"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("string"));
+    }
+  }
+
+  [Test]
+  public void Field_VectorOfAValueClass_IsAVectorOfCopies()
+  {
+    // Arrange
+    var type = Template("std::vector", Class("vtkVariant"),
+                        Template("std::allocator", "vtkVariant"));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert (read and written, a C# array of copies through Std.i's macro)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("std::vector< vtkVariant >"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("vtkVariant[]"));
+      Assert.That(mapped.Type?.Typemap, Is.EqualTo("%netvtk_valueclass_vector(vtkVariant)"));
+      Assert.That(mapped.Type?.Uses.Select(u => u.Package), Is.EqualTo(new[] { "CommonCore" }));
+    }
+  }
+
+  [Test]
+  public void Field_VectorOfVtkObjectPointers_IsReadOnly()
+  {
+    // Arrange (nothing would count the references of objects a property put there)
+    var type = Template("std::vector", Pointer(Class("vtkTransform")),
+                        Template("std::allocator", Pointer(Class("vtkTransform"))));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped.Type?.Spelling, Is.EqualTo("const std::vector< vtkTransform* >"));
+      Assert.That(mapped.Type?.CsType, Is.EqualTo("vtkTransform[]"));
+      Assert.That(mapped.Type?.Typemap, Is.EqualTo("%netvtk_object_vector(vtkTransform)"));
+    }
+  }
+
+  [Test]
+  public void Field_UnorderedMap_IsSkipped()
+  {
+    // Arrange
+    var type = Template("std::unordered_map", Builtin("int"), Builtin("int"));
+
+    // Act
+    var mapped = _mapper.Field(type);
+
+    // Assert
+    Assert.That(mapped.Skip, Does.StartWith("a field of std::unordered_map: "));
+  }
 }

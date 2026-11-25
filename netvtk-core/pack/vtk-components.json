@@ -1,0 +1,919 @@
+{
+  "vtk": "9.7.1",
+  "folders": {
+    "vtkAcceleratorsVTKmCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-LANL-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) Kitware, Inc.",
+        "Copyright 2015 Sandia Corporation.",
+        "Copyright 2015 UT-Battelle, LLC.",
+        "Copyright 2015 Los Alamos National Security."
+      ]
+    },
+    "vtkAcceleratorsVTKmDataModel": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-LANL-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) Kitware, Inc.",
+        "Copyright 2015 Sandia Corporation.",
+        "Copyright 2015 UT-Battelle, LLC.",
+        "Copyright 2015 Los Alamos National Security."
+      ]
+    },
+    "vtkAcceleratorsVTKmFilters": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) Kitware, Inc.",
+        "Copyright 2012 Sandia Corporation."
+      ]
+    },
+    "vtkCommonCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkCommonDataModel": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkCommonExecutionModel": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkCommonMath": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersExtraction": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersGeneral": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-NVIDIA-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation",
+        "Copyright 1993-2007 NVIDIA Corporation."
+      ]
+    },
+    "vtkFiltersGeometry": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersHybrid": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersImaging": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersParallelImaging": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersParallelStatistics": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersSources": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersStatistics": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkFiltersVerdict": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkGeovisCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkGUISupportQt": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkGUISupportQtSQL": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkImagingCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkInfovisBoost": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkInfovisBoostGraphAlgorithms": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkInfovisCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkInfovisLayout": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkInteractionStyle": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkInteractionWidgets": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOADIOS2": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOExport": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-LANL-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) 2007, Los Alamos National Security, LLC"
+      ]
+    },
+    "vtkIOInfovis": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOLANLX3D": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-LANL-Triad-USGov",
+      "copyright": [
+        "Copyright (c) Kitware Inc.",
+        "Copyright (c) 2021, Los Alamos National Laboratory",
+        "Copyright (c) 2021. Triad National Security, LLC. All rights reserved."
+      ]
+    },
+    "vtkIOMINC": {
+      "name": "vtk",
+      "license": "BSD-3-Clause AND MIT",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) 2006 Atamai, Inc.",
+        "Copyright 1993-2000 Peter Neelin and David MacDonald, McConnell Brain"
+      ]
+    },
+    "vtkIOMySQL": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIONetCDF": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-LANL-California-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOOCCT": {
+      "name": "vtk",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright 2019-2021 Kitware SAS",
+        "Copyright 2021-2022 Michael Migliore, Mathieu Westphal"
+      ]
+    },
+    "vtkIOODBC": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOParallelLSDyna": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOParallelNetCDF": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOPIO": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-LANL-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) 2007, Los Alamos National Security, LLC",
+        "Copyright (c) 2021, Triad National Security, LLC"
+      ]
+    },
+    "vtkIOPLY": {
+      "name": "vtk",
+      "license": "BSD-3-Clause AND MIT",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (c) 1994 The Board of Trustees of The Leland Stanford"
+      ]
+    },
+    "vtkIOPostgreSQL": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOSQL": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkIOXdmf2": {
+      "name": "vtk",
+      "license": "BSD-3-Clause AND LicenseRef-BSD-4-Clause-Modif",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright @ 2002 US Army Research Laboratory"
+      ]
+    },
+    "vtkRenderingCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkRenderingLabel": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkRenderingOpenXR": {
+      "name": "vtk",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen"
+      ]
+    },
+    "vtkRenderingOpenXRRemoting": {
+      "name": "vtk",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen"
+      ]
+    },
+    "vtkRenderingParallel": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkRenderingQt": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkRenderingVolume": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkRenderingWebXR": {
+      "name": "vtk",
+      "license": "BSD-3-Clause AND MIT",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright © 2018, 2019 Vhite Rabbit",
+        "Copyright © 2018, 2019 Jonathan Hale"
+      ]
+    },
+    "vtkRenderingZSpace": {
+      "name": "vtk",
+      "license": "BSD-3-Clause AND BSD-3-Clause-Clear",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright (C) 2022 – 2023 zSpace, Inc."
+      ]
+    },
+    "vtkcgns": {
+      "name": "cgns",
+      "version": "4.5.2",
+      "license": "Zlib",
+      "copyright": [
+        "© Copyright 1991-2020, CGNS Steering Commmittee"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/cgns.git@for/vtk-20260604-4.5.2"
+    },
+    "vtkcli11": {
+      "name": "cli11",
+      "version": "2.6.2",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2017-2019 University of Cincinnati, developed by Henry Schreiner under NSF AWARD 1414736"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/cli11.git@for/vtk-20260604-2.6.2"
+    },
+    "vtkdiy2": {
+      "name": "diy2",
+      "version": "3.6.0",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2015, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy)"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/diy2.git@for/vtk-20260413-e5f2edf6f"
+    },
+    "vtkeigen": {
+      "name": "eigen",
+      "version": "3.4.0",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2011, Intel Corporation"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/eigen.git@for/vtk-20260125-3.4.0"
+    },
+    "vtkexodusII": {
+      "name": "exodusII",
+      "version": "9.0.4",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2005-2017 National Technology & Engineering Solutions of Sandia, LLC (NTESS)"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/seacas.git@exodus/for/vtk-20250313-v2025-02-27#packages/seacas/libraries/exodus"
+    },
+    "vtkexpat": {
+      "name": "expat",
+      "version": "2.7.0",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 1998-2000 Thai Open Source Software Center Ltd and Clark Cooper",
+        "Copyright (c) 2001-2019 Expat maintainers"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/expat.git@for/vtk-20260214-2.7.0"
+    },
+    "vtkexprtk": {
+      "name": "exprtk",
+      "version": "0.0.3",
+      "license": "MIT",
+      "copyright": [
+        "1999-2024 Arash Partow"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/exprtk.git@for/vtk-20250313-0.0.3-cmake"
+    },
+    "vtkfast_float": {
+      "name": "fast_float",
+      "version": "8.2.8",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 2021 The fast_float authors"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/fast_float.git@for/vtk-20260608-8.2.8"
+    },
+    "vtkfides": {
+      "name": "fides",
+      "version": "master",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2019 Kitware Inc."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/fides.git@for/vtk-20260601-master-da9049e"
+    },
+    "vtkfmt": {
+      "name": "fmt",
+      "version": "12.1.0",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 2012 - present, Victor Zverovich"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/fmt.git@for/vtk-20260130-12.1.0"
+    },
+    "vtkfreetype": {
+      "name": "freetype",
+      "version": "2.14.3",
+      "license": "FTL",
+      "copyright": [
+        "Copyright 1996-2002, 2006 by David Turner, Robert Wilhelm, and Werner Lemberg"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/freetype.git@for/vtk-20260608-2.14.3"
+    },
+    "vtkgl2ps": {
+      "name": "gl2ps",
+      "version": "1.4.2",
+      "license": "GL2PS",
+      "copyright": [
+        "Copyright (C) 2003, Christophe Geuzaine"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/gl2ps.git@for/vtk-20260125-1.4.2"
+    },
+    "vtkglad": {
+      "name": "glad",
+      "version": "2.0.6",
+      "license": "MIT AND Apache-2.0 AND MIT-Khronos-old",
+      "copyright": [
+        "Copyright (c) 2013-2022 David Herberth, Copyright (c) 2013-2020 The Khronos Group Inc., "
+      ],
+      "download": "git+https://github.com/Dav1dde/glad/tree/glad2"
+    },
+    "vtkh5hut": {
+      "name": "h5hut",
+      "version": "2.0.0rc7",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2006-2016, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any",
+        "required approvals from the U.S. Dept. of Energy) and the Paul Scherrer Institut (Switzerland)."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/h5hut.git@for/vtk-20260125-v2.0.0rc7"
+    },
+    "vtkhdf5": {
+      "name": "hdf5",
+      "version": "1.14.6",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright 2006 by The HDF Group.",
+        "Copyright 1998-2006 by The Board of Trustees of the University of Illinois.",
+        "Copyright (c) 2016, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy).",
+        "Copyright (c) 2013-2022, UChicago Argonne, LLC and The HDF Group.",
+        "Copyright (c) 2022-2023, Intel Corporation."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/hdf5.git@for/vtk-20260130-1.14.6"
+    },
+    "vtkioss": {
+      "name": "ioss",
+      "version": "2025-08-28",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright(C) 1999-2017 National Technology & Engineering Solutions of Sandia, LLC (NTESS)"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/seacas.git@ioss/for/vtk-20260625-v2025-08-28#packages/seacas/libraries/ioss"
+    },
+    "vtkjpeg": {
+      "name": "jpeg",
+      "version": "2.1.0",
+      "license": "IJG AND BSD-3-Clause AND Zlib",
+      "copyright": [
+        "Copyright (C)2009-2021 D. R. Commander.",
+        "Copyright (C)2015 Viktor Szathmáry.",
+        "copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/libjpeg-turbo.git@for/vtk-20260625-2.1.0"
+    },
+    "vtkjsoncpp": {
+      "name": "jsoncpp",
+      "version": "1.9.6",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 2007-2010 Baptiste Lepilleur and The JsonCpp Author"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/jsoncpp.git@for/vtk-20260125-1.9.6"
+    },
+    "vtkkissfft": {
+      "name": "kissfft",
+      "version": "master",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2003-2010 Mark Borgerding"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/kissfft.git@for/vtk-20260125-master-g6f09c27"
+    },
+    "vtklibharu": {
+      "name": "libharu",
+      "version": "2.4.6",
+      "license": "Zlib",
+      "copyright": [
+        "Copyright (C) 1999-2006 Takeshi Kanno",
+        "Copyright (C) 2007-2009 Antony Dovgal"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/libharu.git@for/vtk-20260608-2.4.6"
+    },
+    "vtklibproj": {
+      "name": "libproj",
+      "version": "8.1.0",
+      "license": "MIT",
+      "copyright": [
+        "Copyright Frank Warmerdam"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/proj.git@for/vtk-20260127-8.1.0"
+    },
+    "vtklibxml2": {
+      "name": "libxml2",
+      "version": "2.14.6",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (C) 1998-2012 Daniel Veillard"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/libxml2.git@for/vtk-202600604-2.14.6"
+    },
+    "vtkloguru": {
+      "name": "loguru",
+      "version": "2.1.0",
+      "license": "LicenseRef-scancode-public-domain",
+      "copyright": [
+        "NONE"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/loguru.git@for/vtk-20260125-2.1.0"
+    },
+    "vtklz4": {
+      "name": "lz4",
+      "version": "1.10.0",
+      "license": "BSD-2-Clause",
+      "copyright": [
+        "Copyright (c) 2011-2016, Yann Collet"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/lz4.git@for/vtk-20260125-1.10.0"
+    },
+    "vtklzma": {
+      "name": "lzma",
+      "version": "5.6.4",
+      "license": "0BSD",
+      "copyright": [
+        "NONE"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/xz.git@for/vtk-20260127-5.6.4"
+    },
+    "vtkmpi4py": {
+      "name": "mpi4py",
+      "version": "4.0.1",
+      "license": "BSD-2-Clause AND BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2021, Lisandro Dalcin",
+        "Copyright (c) Sandia Corporation, Kitware Inc."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/mpi4py.git@for/vtk-20260125-4.0.1"
+    },
+    "vtknetcdf": {
+      "name": "netcdf",
+      "version": "4.9.3",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright 2018 Unidata"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/netcdf.git@for/vtk-20260130-4.9.3"
+    },
+    "vtknlohmannjson": {
+      "name": "nlohmannjson",
+      "version": "3.11.3",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 2013-2021 Niels Lohmann"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/nlohmann_json.git@for/vtk-20240529-3.11.3"
+    },
+    "vtkogg": {
+      "name": "ogg",
+      "version": "1.3.5",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2002, Xiph.org Foundation"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/ogg.git@for/vtk-20260125-1.3.5"
+    },
+    "vtkpegtl": {
+      "name": "pegtl",
+      "version": "2.8.3",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 2007-2020 Dr. Colin Hirsch and Daniel Frey"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/pegtl.git@for/vtk-20260125-2.8.3"
+    },
+    "vtkpng": {
+      "name": "png",
+      "version": "1.6.58",
+      "license": "Libpng",
+      "copyright": [
+        "Copyright (c) 1995-2024 The PNG Reference Library Authors.",
+        "Copyright (c) 2018-2024 Cosmin Truta.",
+        "Copyright (c) 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson.",
+        "Copyright (c) 1996-1997 Andreas Dilger.",
+        "Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/png.git@for/vtk-20260902-1.6.58"
+    },
+    "vtkpugixml": {
+      "name": "pugixml",
+      "version": "1.15",
+      "license": "MIT",
+      "copyright": [
+        "Copyright (c) 2006-2020 Arseny Kapoulkine"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/pugixml.git@for/vtk-20260125-master-1.15-ge86ffc5"
+    },
+    "vtkscn": {
+      "name": "scn",
+      "version": "4.0.1",
+      "license": "Apache-2.0 AND BSL-1.0",
+      "copyright": [
+        "Copyright (c) 2017 Elias Kosunen; Copyright (c) 2018 Tristan Brindle (tcbrindle at gmail dot com)"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/scnlib.git@for/vtk-20260125-4.0.1"
+    },
+    "public-domain": {
+      "name": "sqlite",
+      "version": "3.47.2",
+      "license": "blessing",
+      "copyright": [
+        "NONE"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/sqlite.git@for/vtk-20260125-3.47.2"
+    },
+    "vtktheora": {
+      "name": "theora",
+      "version": "1.1.1",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (C) 2002-2009 Xiph.org Foundation"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/theora.git@for/vtk-20260125-1.1.1"
+    },
+    "vtktiff": {
+      "name": "tiff",
+      "version": "4.7.0",
+      "license": "libtiff",
+      "copyright": [
+        "Copyright (c) 1988-1997 Sam Leffler",
+        "Copyright (c) 1991-1997 Silicon Graphics, Inc."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/tiff.git@for/vtk-20260604-4.7.0"
+    },
+    "vtktoken": {
+      "name": "token",
+      "version": "for/vtk",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright ⓒ  2020-2023 Kitware, Inc."
+      ],
+      "download": "git+https://gitlab.kitware.com/utils/token.git@for/vtk"
+    },
+    "vtkutf8": {
+      "name": "utf8",
+      "version": "2.3.4",
+      "license": "BSL-1.0",
+      "copyright": [
+        "Copyright 2006 Nemanja Trifunovic"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/utfcpp.git@for/vtk-20181015-2.3.4"
+    },
+    "vtkverdict": {
+      "name": "verdict",
+      "version": "1.4.5",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright 2003,2006,2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS)."
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/verdict.git@for/vtk-20260604-1.4.5"
+    },
+    "vtkviskores": {
+      "name": "viskores",
+      "version": "1.2.0",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2024-2025 Kitware Inc., National Technology & Engineering Solutions of Sandia, LLC (NTESS),",
+        "UT-Battelle, LLC., Los Alamos National Security, LLC."
+      ],
+      "download": "git+https://github.com/Viskores/viskores.git@v1.2.0-rc1"
+    },
+    "vtkvpic": {
+      "name": "vpic",
+      "version": "unknown",
+      "license": "LicenseRef-BSD-3-Clause-USGov",
+      "copyright": [
+        "Copyright (c) 2007, Los Alamos National Security, LLC"
+      ],
+      "download": "git+https://github.com/lanl/vpic.git"
+    },
+    "vtkxdmf2": {
+      "name": "xdmf",
+      "version": "1.2.11",
+      "license": "LicenseRef-BSD-4-Clause-Modif",
+      "copyright": [
+        "Copyright (c) 2002 U.S. Army Research Laboratory"
+      ],
+      "download": "git+https://gitlab.kitware.com/xdmf/xdmf.git"
+    },
+    "vtkxdmf3": {
+      "name": "xdmf3",
+      "version": "1.2.11",
+      "license": "BSD-4-Clause",
+      "copyright": [
+        "Copyright (c) 2011 U.S. Army Research Laboratory"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/xdmf.git@for/vtk-20260129-master-gfe7dd1ca"
+    },
+    "vtkzlib": {
+      "name": "zlib",
+      "version": "1.3.1",
+      "license": "Zlib",
+      "copyright": [
+        "(C) 1995-2024 Jean-loup Gailly and Mark Adler"
+      ],
+      "download": "git+https://gitlab.kitware.com/third-party/zlib.git@for/vtk-20260125-1.3.1"
+    },
+    "vtkDICOMParser": {
+      "name": "DICOMParser",
+      "license": "BSD-4-Clause",
+      "copyright": [
+        "Copyright (c) 2003 Matt Turek"
+      ]
+    },
+    "vtkkwiml": {
+      "name": "kwiml",
+      "version": "1.0.0",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright 2000-2016 Kitware, Inc. and Contributors"
+      ],
+      "download": "git+https://gitlab.kitware.com/utils/kwiml.git@7b9bd7fe"
+    },
+    "vtksys": {
+      "name": "kwsys",
+      "version": "master",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright 2000-2016 Kitware, Inc. and Contributors"
+      ],
+      "download": "git+https://gitlab.kitware.com/utils/kwsys.git@d427a180"
+    },
+    "vtkmetaio": {
+      "name": "MetaIO",
+      "version": "master",
+      "license": "BSD-3-Clause AND BSD-4-Clause",
+      "copyright": [
+        "Copyright 2000-2014 Insight Software Consortium",
+        "Copyright (c) 1999-2007 Insight Software Consortium"
+      ],
+      "download": "git+https://github.com/Kitware/MetaIO.git@1739984d"
+    },
+    "vtkViewsCore": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkViewsInfovis": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    },
+    "vtkViewsQt": {
+      "name": "vtk",
+      "license": "LicenseRef-BSD-3-Clause-Sandia-USGov",
+      "copyright": [
+        "Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen",
+        "Copyright Sandia Corporation"
+      ]
+    }
+  }
+}

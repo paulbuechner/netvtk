@@ -343,6 +343,10 @@ public:
 class vtkFastGeomQuadStruct {
 public:
   vtkFastGeomQuadStruct();
+  vtkFastGeomQuadStruct* const Next;
+  vtkIdType SourceId;
+  int numPts;
+  void* const ptArray;
 };
 
 class vtkDataSetSurfaceFilter : public vtkPolyDataAlgorithm {
@@ -618,6 +622,11 @@ public:
   vtkStructuredNeighbor(int NeiID, int* overlap);
   vtkStructuredNeighbor(int NeiID, int* overlap, int* orient);
   void ComputeSendAndReceiveExtent(int* gridRealExtent, int* gridGhostedExtent, int* neiRealExtent, int* WholeExtent, int N);
+  int NeighborID;
+  int OverlapExtent[6];
+  int SendExtent[6];
+  int RcvExtent[6];
+  int Orientation[3];
 };
 
 class vtkStructuredAMRNeighbor : public vtkStructuredNeighbor {
@@ -627,6 +636,10 @@ public:
   void GetReceiveExtentOnGrid(int ng, int* gridExtent, int* ext);
   std::string GetRelationShipString();
   void ComputeSendAndReceiveExtent(int* gridRealExtent, int* gridGhostedExtent, int* neiRealExtent, int* WholeExtent, int N);
+  int GridOverlapExtent[6];
+  int GridLevel;
+  int NeighborLevel;
+  int RelationShip;
 };
 
 class vtkStructuredAMRGridConnectivity : public vtkAbstractGridConnectivity {

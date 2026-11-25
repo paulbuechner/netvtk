@@ -1,0 +1,110 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Paul=20B=C3=BCchner?= <45827409+paulbuechner@users.noreply.github.com>
+Date: Sun, 18 Oct 2026 03:01:48 +0200
+Subject: [PATCH] vtkOpenGLHardwareSelector: Keep the window's render
+ framebuffer
+
+BeginSelection set the window's multisamples to 0 and EndSelection
+restored them. vtkOpenGLRenderWindow::CreateFramebuffers releases and
+re-creates the render framebuffer whenever its samples change, so a
+multisampled window re-created it twice per selection, before the passes
+and again after them: time and memory with every pick, and a texture
+another API shares was no longer the one the window rendered into. After
+RegisterSharedRenderFramebuffer, vtkWin32OpenGLDXRenderWindow kept the
+registration of the old color texture, and Direct3D saw the frame before
+the first selection from then on.
+
+The passes still render with one sample, which keeps their ids from
+blending, but into the window's resolve framebuffer: it has the window's
+size and the render framebuffer's color and depth formats, and only reads
+of a multisampled render framebuffer use it. The selector swaps it in for
+the render framebuffer during the passes and back in EndSelection; the
+render framebuffer keeps its samples, textures and contents. A window
+that has made no framebuffers yet still makes them without samples.
+vtkOpenGLRenderWindow declares vtkOpenGLHardwareSelector a friend.
+
+Disabling GL_MULTISAMPLE for the passes instead leaves blended ids where
+surfaces cross: drivers may test depth per sample with multisampling
+disabled, and NVIDIA's does.
+---
+ .../OpenGL2/vtkOpenGLHardwareSelector.cxx     | 30 +++++++++++++++++--
+ Rendering/OpenGL2/vtkOpenGLRenderWindow.h     |  3 ++
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/Rendering/OpenGL2/vtkOpenGLHardwareSelector.cxx b/Rendering/OpenGL2/vtkOpenGLHardwareSelector.cxx
+index 6bcf1c2..4cfa377 100644
+--- a/Rendering/OpenGL2/vtkOpenGLHardwareSelector.cxx
++++ b/Rendering/OpenGL2/vtkOpenGLHardwareSelector.cxx
+@@ -7,6 +7,7 @@
+ #include "vtkDataObject.h"
+ #include "vtkObjectFactory.h"
+ #include "vtkOpenGLError.h"
++#include "vtkOpenGLFramebufferObject.h"
+ #include "vtkOpenGLRenderUtilities.h"
+ #include "vtkOpenGLRenderWindow.h"
+ #include "vtkOpenGLState.h"
+@@ -15,6 +16,8 @@
+ #include "vtkRenderer.h"
+ #include "vtkStringFormatter.h"
+ 
++#include <utility> // for std::swap
++
+ // #define vtkOpenGLHardwareSelectorDEBUG
+ #ifdef vtkOpenGLHardwareSelectorDEBUG
+ #include "vtkImageImport.h"
+@@ -98,8 +101,21 @@ void vtkOpenGLHardwareSelector::BeginSelection()
+ {
+   auto rwin = vtkOpenGLRenderWindow::SafeDownCast(this->Renderer->GetRenderWindow());
+ 
++  // The passes write ids, which must not blend with the other samples of their pixels. Rendering
++  // them without samples would make the window release and re-create its render framebuffer,
++  // before the passes and again after them: a multisampled one stays, and they render into the
++  // window's resolve framebuffer, which has one sample. A window that has made no framebuffers yet
++  // makes them without samples.
+   this->OriginalMultiSample = rwin->GetMultiSamples();
+-  rwin->SetMultiSamples(0);
++  if (rwin->RenderFramebuffer->GetMultiSamples() > 0 && rwin->ResolveFramebuffer->GetFBOIndex())
++  {
++    std::swap(rwin->RenderFramebuffer, rwin->ResolveFramebuffer);
++    rwin->MultiSamples = rwin->LastMultiSamples = 0;
++  }
++  else
++  {
++    rwin->SetMultiSamples(0);
++  }
+ 
+   vtkOpenGLState* ostate = rwin->GetState();
+   ostate->Reset();
+@@ -128,7 +144,17 @@ void vtkOpenGLHardwareSelector::EndSelection()
+   }
+ 
+   auto rwin = vtkOpenGLRenderWindow::SafeDownCast(this->Renderer->GetRenderWindow());
+-  rwin->SetMultiSamples(this->OriginalMultiSample);
++  // the resolve framebuffer has samples only while it stands in for the render framebuffer
++  if (rwin->ResolveFramebuffer->GetMultiSamples() > 0)
++  {
++    std::swap(rwin->RenderFramebuffer, rwin->ResolveFramebuffer);
++    rwin->LastMultiSamples = rwin->RenderFramebuffer->GetMultiSamples();
++    rwin->MultiSamples = this->OriginalMultiSample;
++  }
++  else
++  {
++    rwin->SetMultiSamples(this->OriginalMultiSample);
++  }
+   vtkOpenGLState* ostate = rwin->GetState();
+   ostate->Pop();
+ 
+diff --git a/Rendering/OpenGL2/vtkOpenGLRenderWindow.h b/Rendering/OpenGL2/vtkOpenGLRenderWindow.h
+index a3eac1e..cb82332 100644
+--- a/Rendering/OpenGL2/vtkOpenGLRenderWindow.h
++++ b/Rendering/OpenGL2/vtkOpenGLRenderWindow.h
+@@ -606,6 +606,9 @@ protected:
+   // framebuffer
+   vtkOpenGLFramebufferObject* ResolveFramebuffer;
+ 
++  // renders its passes into the resolve framebuffer in place of a multisampled render framebuffer
++  friend class vtkOpenGLHardwareSelector;
++
+   // used when we need to read depth component
+   // with OpenGL ES 3
+   vtkOpenGLFramebufferObject* DepthFramebuffer;

@@ -140,14 +140,14 @@ internal sealed partial class PackageParser
     }
 
     // a VTK object: vtkObjectBase counts its references
-    private static bool IsTransient(CXXRecordDecl r)
+    private static bool IsVtkObject(CXXRecordDecl r)
     {
       if (r.Name == "vtkObjectBase")
       {
         return true;
       }
 
-      return r.Bases.Any(b => BaseDefinition(b) is { } baseDecl && IsTransient(baseDecl));
+      return r.Bases.Any(b => BaseDefinition(b) is { } baseDecl && IsVtkObject(baseDecl));
     }
   }
 }

@@ -15,7 +15,8 @@ namespace NetVtk.Generator.Tests;
 
 /// <summary>
 /// Raw pointers to netvtk-core's contract: a class is its proxy, numbers and structs a C# array
-/// unless the callee may keep them, void*, functions and undefined classes an IntPtr.
+/// unless the callee may keep them, void*, functions and undefined classes an IntPtr; numbers C++
+/// hands back through a T*&amp; a size hint names, a ref of a C# array.
 /// </summary>
 [TestFixture]
 public class PointerMappingTests
@@ -383,5 +384,38 @@ public class PointerMappingTests
 
     // Assert
     Assert.That(mapped.Skip, Does.StartWith("returns a native std::ostream"));
+  }
+
+  [Test]
+  public void SizedParameter_PointerReferenceToNumbers_IsARefOfAnArray()
+  {
+    // Arrange (const vtkIdType*& pts, three of them)
+    var type = Ref(Pointer(Const(new BuiltinType("long long", Written: "vtkIdType"))));
+
+    // Act
+    var mapped = _mapper.SizedParameter(type, "(*arg3)");
+
+    // Assert (VtkObjects.i's typemaps by the parameter's name)
+    using (Assert.EnterMultipleScope())
+    {
+      Assert.That(mapped?.Spelling, Is.EqualTo("const vtkIdType*&"));
+      Assert.That(mapped?.CsType, Is.EqualTo("ref long[]"));
+      Assert.That(mapped?.Sized?.Macro("pts"),
+                  Is.EqualTo("%netvtk_sized_ref(const vtkIdType, pts, long, (*arg3))"));
+      Assert.That(mapped?.Sized?.Clear("pts"), Is.EqualTo("const vtkIdType *&pts"));
+    }
+  }
+
+  [Test]
+  public void SizedParameter_OtherParameter_IsNull()
+  {
+    // Arrange (a pointer the caller passes: an array already)
+    var type = Pointer(Builtin("double"));
+
+    // Act
+    var mapped = _mapper.SizedParameter(type, "arg2");
+
+    // Assert
+    Assert.That(mapped, Is.Null);
   }
 }

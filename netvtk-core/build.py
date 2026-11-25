@@ -9,6 +9,7 @@
                                                     # --prune-archives: then drop the cached archives no install uses
     python build.py generate                        # SWIG: src/SWIG_files/wrapper/*.i -> build/generated
     python build.py native --triplet x64-windows    # CMake: NetVtk<Group> libraries + VTK's -> artifacts/runtimes/<rid>/native
+    python build.py third-party                     # pack/vtk-components.json from VTK's sources, after a VTK update
     python build.py test --arch x64 [--framework net10.0|net8.0|net6.0|net48|net472|net462|net35] [--no-rendering]
                                                     # no --framework on Windows: every framework, net35 on CLR 2,
                                                     # plus the net45/net452 library builds
@@ -37,6 +38,9 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+
+import loads
+import sbom
 
 ROOT = Path(__file__).resolve().parent
 TOOLS = ROOT / ".tools"
@@ -261,6 +265,21 @@ def native_libraries() -> dict[str, list[str]]:
     return {f"NetVtk{group}": modules for group, modules in json.loads(path.read_text(encoding="utf-8")).items()}
 
 
+def platform_libraries() -> dict[str, str]:
+    """The native libraries of one platform's classes and that platform's OS as .NET's RIDs name it (win, linux, osx),
+    from platforms.json: built and packed there only."""
+    path = SWIG_FILES / "platforms.json"
+    if not path.exists():
+        sys.exit(f"{path.relative_to(ROOT)} missing")
+    return {f"NetVtk{group}": os_name for group, os_name in json.loads(path.read_text(encoding="utf-8")).items()}
+
+
+def library_sources(cxx_dir: Path, library: str, platforms: dict[str, str]) -> Path:
+    """Where generate puts a native library's C++, which CMake builds: cxx/<library>, a platform's library in
+    cxx/<os>/<library>, which CMake builds on that OS only."""
+    return cxx_dir / platforms[library] / library if library in platforms else cxx_dir / library
+
+
 def sift_swig_messages(module: str, messages: str) -> tuple[list[str], int, list[str]]:
     """A module's SWIG messages without the harmless Warning 401 pairs: the lines to print, the pairs left out, and the
     Warning 401 lines left in, each a class SWIG gave C# without its base.
@@ -291,6 +310,7 @@ def cmd_generate(_: argparse.Namespace) -> None:
     swig = swig_executable()
     env = swig_env()
     libraries = native_libraries()
+    platforms = platform_libraries()
     library_of = {module: library for library, modules in libraries.items() for module in modules}
     cxx_dir = GENERATED / "cxx"
     cs_root = GENERATED / "cs"
@@ -298,9 +318,10 @@ def cmd_generate(_: argparse.Namespace) -> None:
         shutil.rmtree(GENERATED)
     cxx_dir.mkdir(parents=True)
 
-    # C++ per library (CMake builds one from each directory), C# per module
+    # C++ per library (CMake builds one from each directory, a platform's on that platform only), C# per module: every
+    # platform's in NetVtk.dll
     for library in libraries:
-        (cxx_dir / library).mkdir()
+        library_sources(cxx_dir, library, platforms).mkdir(parents=True)
 
     def swig_module(module: str) -> tuple[str, subprocess.CompletedProcess[str]]:
         cs_dir = cs_root / module
@@ -312,7 +333,7 @@ def cmd_generate(_: argparse.Namespace) -> None:
                "-I" + str(SWIG_FILES / "wrapper"),
                "-I" + str(SWIG_FILES),  # %include "extras/<Module>.i"
                "-outdir", cs_dir,
-               "-o", cxx_dir / library_of[module] / f"{module}_wrap.cxx",
+               "-o", library_sources(cxx_dir, library_of[module], platforms) / f"{module}_wrap.cxx",
                SWIG_FILES / "wrapper" / f"{module}.i"]
         return module, subprocess.run([str(c) for c in cmd], env=env, capture_output=True, text=True,
                                       encoding="utf-8", errors="replace")
@@ -451,6 +472,8 @@ def cmd_native(args: argparse.Namespace) -> None:
     if not host_is_windows():
         flatten_stage(stage)
     write_notices(args.triplet, stage, stage.parent / "THIRD-PARTY-NOTICES.txt")
+    sbom.write(stage, stage.parent / sbom.FILE, f"NetVtk.runtime.{rid}", prefix=prefix, vtk=vtk_version(),
+               repository=REPOSITORY)
 
 
 def loader_name(library: Path) -> str | None:
@@ -494,6 +517,13 @@ def write_notices(triplet: str, stage: Path, target: Path) -> None:
             parts.append((f"VTK: {path.relative_to(licenses).as_posix()}", path.read_text(encoding="utf-8", errors="replace")))
     rule = "=" * 78
     target.write_text("".join(f"{rule}\n{name}\n{rule}\n\n{text.strip()}\n\n" for name, text in parts), encoding="utf-8")
+
+
+def cmd_third_party(args: argparse.Namespace) -> None:
+    vtk = vtk_version()
+    source = Path(args.source) if args.source else sbom.vtk_source(VCPKG_STATE / "buildtrees", vtk)
+    count = sbom.write_vtk_components(source, vtk)
+    print(f"{sbom.VTK_COMPONENTS.relative_to(ROOT)}: {count} license folders from {source}")
 
 
 # --------------------------------------------------------------------------- test
@@ -821,6 +851,8 @@ def cmd_release(args: argparse.Namespace) -> None:
 
 # --------------------------------------------------------------------------- packages
 PACKAGE_TESTS = ROOT / "test" / "NetVtk.PackageTests"
+# the NetVtk modules the package tests use, for their run with NetVtkModules (Win32 is in the Windows packages only)
+PACKAGE_TEST_MODULES = "Common;Filters;Rendering;Win32"
 
 
 def pack_notes(version: str) -> str:
@@ -868,6 +900,9 @@ def cmd_pack(args: argparse.Namespace) -> None:
 
     ci = ["-p:ContinuousIntegrationBuild=true"] if os.environ.get("GITHUB_ACTIONS") else []
     for rid in rids:
+        sbom.stamp(natives(rid).parent / sbom.FILE, version)
+        # what each native loads, for the targets' module selection (NetVtkModules)
+        loads.write(natives(rid), natives(rid).parent / "natives.targets", f"NetVtk.runtime.{rid}", "NetVtk")
         run(["dotnet", "pack", ROOT / "pack" / "NetVtk.runtime.csproj", "-c", "Release", "-o", PACKAGES,
              f"-p:NetVtkRid={rid}", f"-p:Version={version}", *ci])
 
@@ -912,9 +947,11 @@ def cmd_test_package(args: argparse.Namespace) -> None:
     if not (PACKAGES / "NetVtk.version.props").exists():
         sys.exit("no packages: run build.py pack first")
     frameworks = ["net8.0", "net48"] if host_is_windows() else ["net8.0"]
-    for framework in frameworks:
-        run(["dotnet", "test", PACKAGE_TESTS / "NetVtk.PackageTests.csproj", "-c", "Release", "--arch", args.arch,
-             "--framework", framework])
+    # all modules, then the ones the tests use (NetVtkModules from the environment: -p: splits values at ';')
+    for env in (None, dict(os.environ, NetVtkModules=PACKAGE_TEST_MODULES)):
+        for framework in frameworks:
+            run(["dotnet", "test", PACKAGE_TESTS / "NetVtk.PackageTests.csproj", "-c", "Release", "--arch", args.arch,
+                 "--framework", framework], env=env)
 
 
 # --------------------------------------------------------------------------- the vcpkg registry
@@ -997,6 +1034,9 @@ def parser() -> argparse.ArgumentParser:
                             help="then delete the binary cache archives no install root uses (CI)")
         sp.set_defaults(fn=fn)
     sub.add_parser("generate", help="SWIG over the modules -> build/generated").set_defaults(fn=cmd_generate)
+    tpy = sub.add_parser("third-party", help="pack/vtk-components.json: VTK's modules and built-in libraries, from its sources")
+    tpy.add_argument("--source", help="VTK's source tree; default: the one vcpkg extracted under .vcpkg/buildtrees")
+    tpy.set_defaults(fn=cmd_third_party)
     t = sub.add_parser("test", help="the NetVtk tests")
     t.add_argument("--arch", default="x64", choices=["x64", "x86", "arm64"])
     t.add_argument("--framework", choices=FRAMEWORKS, help="default: all (Windows), the .NET ones elsewhere")

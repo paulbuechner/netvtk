@@ -12877,5 +12877,17 @@
       "kind": "class",
       "cpp": "vtkXYPlotWidget"
     }
+  ],
+  "RenderingOpenGL2Win32": [
+    {
+      "name": "vtkWin32OpenGLDXRenderWindow",
+      "kind": "class",
+      "cpp": "vtkWin32OpenGLDXRenderWindow"
+    },
+    {
+      "name": "vtkWin32OpenGLRenderWindow",
+      "kind": "class",
+      "cpp": "vtkWin32OpenGLRenderWindow"
+    }
   ]
 }

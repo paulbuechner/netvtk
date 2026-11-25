@@ -582,6 +582,8 @@
 %netvtk_address(%arg(vtkTexture**))
 %netvtk_address_ref(%arg(void*))
 %netvtk_keep_construct(vtkRenderState)
+%netvtk_object_vector(vtkGPUInfo)
+%netvtk_object_vector(vtkPolyData)
 %netvtk_sized_return(double, double, 2)
 %netvtk_sized_return(double, double, 3)
 %netvtk_sized_return(double, double, 4)
@@ -594,6 +596,11 @@
 %netvtk_sized_return(int, int, 4)
 %netvtk_sized_return(int, int, 6)
 %netvtk_sized_return(unsigned int, uint, 4)
+%netvtk_valueclass_vector(vtkRenderTimerLog_Event)
+%netvtk_vector(double, double)
+%netvtk_vector(float, float)
+%netvtk_vector(int, int)
+%netvtk_vector(unsigned int, uint)
 
 %{
 // Layout guards for the C# structs in src/NetVtk/RenderingCore/: a mismatch fails the native build.
@@ -1101,6 +1108,7 @@ public:
   void BuildPaths(vtkAssemblyPaths* paths, vtkAssemblyPath* path);
   %clear vtkAssemblyPaths* paths;
   bool GetSupportsSelection();
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* arg0, std::vector< unsigned int >& arg1);
   int GetNumberOfConsumers();
   void AddConsumer(vtkObject* c);
   void RemoveConsumer(vtkObject* c);
@@ -1265,6 +1273,7 @@ public:
   void ForceTranslucentOn();
   void ForceTranslucentOff();
   bool GetSupportsSelection();
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets);
   bool IsRenderingTranslucentPolygonalGeometry();
   void SetIsRenderingTranslucentPolygonalGeometry(bool val);
 };
@@ -2033,6 +2042,11 @@ public:
 class vtkCellGraphicsPrimitiveMap_PrimitiveDescriptor {
 public:
   vtkCellGraphicsPrimitiveMap_PrimitiveDescriptor();
+  vtkSmartPointer<vtkTypeUInt8Array> EdgeArray;
+  vtkSmartPointer<vtkTypeInt32Array> PrimitiveToCell;
+  vtkSmartPointer<vtkTypeInt32Array> VertexIDs;
+  int PrimitiveSize;
+  vtkTypeInt32 LocalCellIdOffset;
 };
 
 class vtkMapper : public vtkAbstractMapper3D {
@@ -2147,6 +2161,7 @@ public:
   bool HasOpaqueGeometry();
   bool HasTranslucentPolygonalGeometry();
   bool GetSupportsSelection();
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* arg0, std::vector< unsigned int >& arg1, vtkProp* arg2);
   int CanUseTextureMapForColoring(vtkDataObject* input);
   void ClearColorArrays();
   vtkUnsignedCharArray* const GetColorMapColors();
@@ -2808,6 +2823,8 @@ public:
   %netvtk_keep_argument(SetInputArrayToProcess.1, vtkInformation* info)
   void SetInputArrayToProcess(int idx, vtkInformation* info);
   %clear vtkInformation* info;
+  std::vector< vtkPolyData* > GetRenderedList();
+  void ProcessSelectorPixelBuffers(vtkHardwareSelector* sel, std::vector< unsigned int >& pixeloffsets, vtkProp* prop);
   void SetVBOShiftScaleMethod(int method);
   void SetPauseShiftScale(bool pauseShiftScale);
   vtkMTimeType GetMTime();
@@ -2830,6 +2847,7 @@ public:
   void Unmark();
   void ClearUnmarkedBatchElements();
   void UnmarkBatchElements();
+  std::vector< vtkPolyData* > GetRenderedList() const;
   void SetParent(vtkCompositePolyDataMapper* mapper);
   vtkCompositePolyDataMapperDelegator_BatchElement* Get(vtkPolyData* polydata);
   void Clear();
@@ -2838,6 +2856,32 @@ public:
 class vtkCompositePolyDataMapperDelegator_BatchElement {
 public:
   vtkCompositePolyDataMapperDelegator_BatchElement();
+  bool Marked;
+  bool IsOpaque;
+  bool Visibility;
+  bool Pickability;
+  bool OverridesColor;
+  bool ScalarVisibility;
+  bool UseLookupTableScalarRange;
+  bool InterpolateScalarsBeforeMapping;
+  int ColorMode;
+  int ScalarMode;
+  int ArrayAccessMode;
+  int ArrayComponent;
+  int ArrayId;
+  vtkIdType FieldDataTupleId;
+  unsigned int FlatIndex;
+  vtkColor3d AmbientColor;
+  vtkColor3d DiffuseColor;
+  vtkColor3d SpecularColor;
+  vtkColor3d SelectionColor;
+  double Opacity;
+  double SelectionOpacity;
+  vtkVector2d ScalarRange;
+  vtkSmartPointer<vtkTexture> Texture;
+  std::string ArrayName;
+  vtkScalarsToColors* const LookupTable;
+  vtkPolyData* const PolyData;
 };
 
 class vtkCuller : public vtkObject {
@@ -3152,6 +3196,7 @@ public:
 class vtkGPUInfoListArray {
 public:
   vtkGPUInfoListArray();
+  const std::vector< vtkGPUInfo* > v;
 };
 
 class vtkGenericVertexAttributeMapping : public vtkObject {
@@ -3510,6 +3555,15 @@ public:
 class vtkHardwareSelector_PixelInformation {
 public:
   vtkHardwareSelector_PixelInformation();
+  bool Valid;
+  int ProcessID;
+  int PropID;
+  vtkProp* const Prop;
+  unsigned int CompositeID;
+  vtkIdType AttributeID;
+  vtkIdType CellGridCellTypeID;
+  vtkIdType CellGridSourceSpecID;
+  vtkIdType CellGridTupleID;
 };
 
 class vtkRenderWindowInteractor : public vtkObject {
@@ -4352,6 +4406,12 @@ public:
 class vtkLODProp3DEntry_t {
 public:
   vtkLODProp3DEntry_t();
+  vtkProp3D* const Prop3D;
+  int Prop3DType;
+  int ID;
+  double EstimatedTime;
+  int State;
+  double Level;
 };
 
 class vtkLODProp3D : public vtkProp3D {
@@ -5386,6 +5446,9 @@ public:
   bool ReadFile(const char* FileName);
   bool ReadBuffer(const char* Buffer);
   std::string LookupImplName(const std::string& nickname) const;
+  std::vector< std::string > GetDoubleShaderVariableList(const std::string& nickname) const;
+  std::vector< double > GetDoubleShaderVariable(const std::string& nickname, const std::string& varname) const;
+  std::vector< std::string > GetTextureList(const std::string& nickname) const;
   vtkTexture* const GetTexture(const std::string& nickname, const std::string& varname) const;
   NetVtk_Address< const TextureInfo* > GetTextureInfo(const std::string& nickname, const std::string& varname) const;
   std::string GetTextureName(const std::string& nickname, const std::string& varname) const;
@@ -5469,6 +5532,7 @@ class vtkRenderTimerLog_Frame {
 public:
   vtkRenderTimerLog_Frame();
   void Print(std::ostream& os, float threshMs = 0.f);
+  std::vector< vtkRenderTimerLog_Event > Events;
 };
 
 class vtkRenderTimerLog_Event {
@@ -5478,6 +5542,10 @@ public:
   float ElapsedTimeMilliseconds() const;
   vtkTypeUInt64 ElapsedTimeNanoseconds() const;
   void Print(std::ostream& os, float threshMs = 0.f, vtkIndent indent = vtkIndent());
+  std::string Name;
+  vtkTypeUInt64 StartTime;
+  vtkTypeUInt64 EndTime;
+  std::vector< vtkRenderTimerLog_Event > Events;
 };
 
 class vtkRenderTimerLog_ScopedEventLogger {
@@ -5674,6 +5742,10 @@ public:
   void SetUseSRGBColorSpace(bool _arg);
   void UseSRGBColorSpaceOn();
   void UseSRGBColorSpaceOff();
+  bool GetUseReverseZ();
+  void SetUseReverseZ(bool _arg);
+  void UseReverseZOn();
+  void UseReverseZOff();
   void SetPhysicalViewDirection(double arg0, double arg1, double arg2);
   void SetPhysicalViewDirection(double* arg0);
   %apply double *NETVTK_SIZE3 { double *GetPhysicalViewDirection };
@@ -6949,6 +7021,13 @@ public:
 class vtkTextRenderer_Metrics {
 public:
   vtkTextRenderer_Metrics();
+  vtkTuple_int_4 BoundingBox;
+  vtkVector2i TopLeft;
+  vtkVector2i TopRight;
+  vtkVector2i BottomLeft;
+  vtkVector2i BottomRight;
+  vtkVector2i Ascent;
+  vtkVector2i Descent;
 };
 
 class vtkTexture : public vtkImageAlgorithm {
@@ -7150,6 +7229,10 @@ public:
   static int StringToScalarType(const std::string& s);
   void RemoveUniform(const char* name);
   void RemoveAllUniforms();
+  void SetUniform(const char* name, vtkUniforms_TupleType tt, int nbComponents, const std::vector< int >& value);
+  void SetUniform(const char* name, vtkUniforms_TupleType tt, int nbComponents, const std::vector< float >& value);
+  bool GetUniform(const char* name, std::vector< int >& value);
+  bool GetUniform(const char* name, std::vector< float >& value);
   void SetUniformi(const char* name, int v);
   void SetUniformf(const char* name, float v);
   void SetUniform2i(const char* name, const int* v);
@@ -7179,6 +7262,12 @@ public:
   bool GetUniform4uc(const char* name, unsigned char* v);
   bool GetUniformMatrix(const char* name, vtkMatrix3x3* v);
   bool GetUniformMatrix(const char* name, vtkMatrix4x4* v);
+  bool GetUniform1iv(const char* name, std::vector< int >& f);
+  bool GetUniform1fv(const char* name, std::vector< float >& f);
+  bool GetUniform2fv(const char* name, std::vector< float >& f);
+  bool GetUniform3fv(const char* name, std::vector< float >& f);
+  bool GetUniform4fv(const char* name, std::vector< float >& f);
+  bool GetUniformMatrix4x4v(const char* name, std::vector< float >& f);
   int GetNumberOfUniforms();
   const char* GetNthUniformName(vtkIdType uniformIndex);
   int GetUniformScalarType(const char* name);

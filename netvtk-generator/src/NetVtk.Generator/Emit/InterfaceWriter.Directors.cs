@@ -58,7 +58,7 @@ internal sealed partial class InterfaceWriter
   {
     List<VirtualMember> members = [];
     HashSet<string> seen = [];
-    foreach (var owner in c.Ancestors.Prepend(c.Name).TakeWhile(a => a != RootTransient))
+    foreach (var owner in c.Ancestors.Prepend(c.Name).TakeWhile(a => a != RootVtkObject))
     {
       if ((owner == c.Name ? c : classOf?.Invoke(owner)) is not { } model)
       {
@@ -139,7 +139,7 @@ internal sealed partial class InterfaceWriter
     _ when IsDirectorNumber(type) => null,
     // a VTK object (vtkCommand::Execute's caller), with a reference for the override's proxy
     // (VtkObjects.i), and an address (its callData)
-    PointerType { Pointee: NamedType n } when registry.Class(n.Name) is { Kind: WrapKind.Transient }
+    PointerType { Pointee: NamedType n } when registry.Class(n.Name) is { Kind: WrapKind.VtkObject }
       => null,
     PointerType { Pointee: BuiltinType { Name: "void" } } => null,
     NamedType { Kind: NamedKind.Enum } => null,
@@ -154,7 +154,7 @@ internal sealed partial class InterfaceWriter
       ? null
       : "an enum by non-const reference",
     ReferenceType { IsRValue: false, Referee: NamedType { Kind: NamedKind.Class } n } when
-      registry.Class(n.Name) is { Kind: not WrapKind.Transient } => null,
+      registry.Class(n.Name) is { Kind: not WrapKind.VtkObject } => null,
     PointerType { Pointee: BuiltinType { Name: "char", IsConst: true } } => null,
     _ => $"{type.Spelling} doesn't reach a C# override",
   };
