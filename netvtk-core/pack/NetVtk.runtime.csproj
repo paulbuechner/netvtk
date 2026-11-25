@@ -11,7 +11,7 @@
     <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
     <Authors>Paul Büchner</Authors>
     <Copyright>Copyright (c) 2026 Paul Büchner</Copyright>
-    <Description>Native libraries of NetVtk for $(NetVtkRid): the NetVtk libraries and VTK 9.7.1. Referenced by the NetVtk package; not meant to be installed alone.</Description>
+    <Description>Native libraries of NetVtk for $(NetVtkRid): the NetVtk libraries and VTK's. Referenced by the NetVtk package; not meant to be installed alone.</Description>
     <PackageTags>vtk;visualization;native</PackageTags>
     <PackageProjectUrl>https://paulbuechner.github.io/netvtk/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/paulbuechner/netvtk</RepositoryUrl>

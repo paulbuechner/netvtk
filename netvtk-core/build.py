@@ -13,10 +13,10 @@
     python build.py test --arch x64 [--framework net10.0|net8.0|net6.0|net48|net472|net462|net35] [--no-rendering]
                                                     # no --framework on Windows: every framework, net35 on CLR 2,
                                                     # plus the net45/net452 library builds
-    python build.py pack [--version 9.7.1.1] [--rids win-x64,win-x86]  # NuGet: NetVtk + NetVtk.runtime.<rid>
+    python build.py pack [--version <version>] [--rids win-x64,win-x86]  # NuGet: NetVtk + NetVtk.runtime.<rid>
     python build.py test-package [--arch x64]       # the packed NetVtk, consumed like an app would
     python build.py change fixed "what changed"     # a changelog entry for the next release: changes/<name>.<type>.md
-    python build.py changelog [--version 9.7.1.1]   # a release's notes; default: what's pending
+    python build.py changelog [--version <version>] # a release's notes; default: what's pending
                                                     # --pull-request next: its release PR's description
     python build.py changelog --check origin/main   # fail if the packages changed since then without an entry
     python build.py version [--ci RUN | --latest]   # the version to pack, or the newest release

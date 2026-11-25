@@ -8,16 +8,16 @@ namespace Vtk;
 
 /// <summary>
 /// The VTK build NetVtk's natives carry: VTK's version and the port-version of NetVtk's VTK port,
-/// which counts its patches, as the port's <c>vtkNetVtkBuild.h</c> names it (<c>9.7.1#1</c>). A
-/// native binding compiled against VTK's headers runs on these libraries, so it must have been
-/// compiled against the same build: it checks with <see cref="Require"/> when it loads
-/// (NetVtkInterop.i's <c>%netvtk_build</c>).
+/// which counts its patches, as the port's <c>vtkNetVtkBuild.h</c> names it
+/// (<c>&lt;VTK version&gt;#&lt;port-version&gt;</c>). A native binding compiled against VTK's
+/// headers runs on these libraries, so it must have been compiled against the same build: it
+/// checks with <see cref="Require"/> when it loads (NetVtkInterop.i's <c>%netvtk_build</c>).
 /// </summary>
 public static class VtkBuild
 {
   private static string _current;
 
-  /// <summary>The build NetVtk's natives carry, such as <c>9.7.1#1</c>.</summary>
+  /// <summary>The build NetVtk's natives carry: VTK's version, #, the port-version.</summary>
   public static string Current => _current ??= Utf8.Decode(NetVtk_VtkBuild());
 
   /// <summary>

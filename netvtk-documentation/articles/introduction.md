@@ -1,6 +1,6 @@
 # Introduction
 
-NetVtk is VTK 9.7.1's C++ API in C#, generated from VTK's headers. Names don't change: `vtkPolyDataMapper` is `vtkPolyDataMapper`, in the namespace `Vtk`. VTK's [reference](../classes/index.md), its examples and forum answers apply as they are, once you know [how signatures map](mapping.md); VTK's own documentation comes along in IntelliSense.
+NetVtk is VTK's C++ API in C#, generated from VTK's headers. Names don't change: `vtkPolyDataMapper` is `vtkPolyDataMapper`, in the namespace `Vtk`. VTK's [reference](../classes/index.md), its examples and forum answers apply as they are, once you know [how signatures map](mapping.md); VTK's own documentation comes along in IntelliSense.
 
 ## VTK's parts
 

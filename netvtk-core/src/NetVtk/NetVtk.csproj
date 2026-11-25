@@ -36,7 +36,7 @@
     <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
     <Authors>Paul Büchner</Authors>
     <Copyright>Copyright (c) 2026 Paul Büchner</Copyright>
-    <Description>C# bindings for the Visualization Toolkit (VTK) 9.7.1, with VTK's names: data sets and arrays, filters, readers and writers, rendering and interaction, for visualizing simulation results. For .NET Framework 3.5+, .NET 6+ and netstandard2.0, on Windows (x64, x86), Linux (x64) and macOS (arm64).</Description>
+    <Description>C# bindings for the Visualization Toolkit (VTK), with VTK's names: data sets and arrays, filters, readers and writers, rendering and interaction, for visualizing simulation results. For .NET Framework 3.5+, .NET 6+ and netstandard2.0, on Windows (x64, x86), Linux (x64) and macOS (arm64).</Description>
     <PackageTags>vtk;visualization;3d;rendering;mesh;scientific;simulation;cae;fem;cfd</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- with VTK's documentation: NetVtk.xml is the doc comments of VTK's headers, under VTK's license -->

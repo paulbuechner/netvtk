@@ -8,7 +8,7 @@ No maintained open-source .NET binding of VTK exists: Kitware's ActiViz is propr
 
 | Question | Decision | Why |
 |---|---|---|
-| VTK version | 9.7.1, through NetVtk's own vcpkg port | vcpkg's port is at 9.3.0 (2023) |
+| VTK version | Kitware's latest release, through NetVtk's own vcpkg port | vcpkg's port is at 9.3.0 (2023) |
 | Modules | 25 ([Modules](modules.md)): data, filters, readers, rendering, interaction; more as port features | package size, build time |
 | Namespace | one, `Vtk` | VTK's class names are unique (the `vtk` prefix); a pipeline touches six modules or more |
 | Names | VTK's, unchanged | C++ examples and VTK's reference carry over line by line |
@@ -23,7 +23,7 @@ No maintained open-source .NET binding of VTK exists: Kitware's ActiViz is propr
 | Arrays | bulk copies through one native copy, `Span<T>` on .NET 6+ | fields hold millions of values |
 | Third-party libraries | VTK's own copies, with mangled symbols; the port depends on no other port | nothing clashes with the zlib or FreeType other libraries in the process link |
 | Platform classes | Windows' render windows a module of their own, in `NetVtkWin32`, which only the Windows runtime packages hold | VTK installs their headers on Windows only; everything else builds everywhere |
-| Versions | `<VTK version>.<revision>`, e.g. `9.7.1.1` | a version names the VTK it wraps |
+| Versions | `<VTK version>.<revision>`, revisions from 1 per VTK version | a version names the VTK it wraps |
 | Layout | `netvtk-core`, `-generator`, `-documentation`, `-demos` | each folder builds on its own |
 
 ## How netvtk-gen reads VTK
@@ -37,7 +37,7 @@ No maintained open-source .NET binding of VTK exists: Kitware's ActiViz is propr
 
 ## VTK's patches
 
-NetVtk builds Kitware's v9.7.1 with six patches (`netvtk-core/vcpkg/ports/vtk`), each with tests in netvtk-core. The members they add come last in their classes: a library compiled against VTK's unpatched headers finds every other member where it was.
+NetVtk builds Kitware's release tag with six patches (`netvtk-core/vcpkg/ports/vtk`), each with tests in netvtk-core. The members they add come last in their classes: a library compiled against VTK's unpatched headers finds every other member where it was.
 
 - **`vtkWin32OpenGLDXRenderWindow` makes its own OpenGL context current** before its interop calls (`Lock`, `Unlock`, registering and unregistering shared textures). VTK used whichever was current, while `WGL_NV_DX_interop` registers a texture name of the current context: a window resized after another rendered registered its texture in the other's context, and the process crashed a moment later. Without an interop device (a driver lacking the extension) it reports an error where it crashed.
 - **A deleted `vtkWin32OpenGLDXRenderWindow` closes its interop device:** its destructor unregisters the shared textures and closes the device while its context lives. VTK never closed it, and the device held the application's Direct3D device alive, with every texture made on it: about 100 MiB and 187 handles per window made and disposed.

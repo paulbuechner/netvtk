@@ -1,6 +1,6 @@
 # NetVtk
 
-C# bindings for the [Visualization Toolkit](https://vtk.org) (VTK) 9.7.1, generated from VTK's headers: VTK's class names, its pipelines as in C++, and IntelliSense shows VTK's documentation.
+C# bindings for the [Visualization Toolkit](https://vtk.org) (VTK), generated from VTK's headers: VTK's class names, its pipelines as in C++, and IntelliSense shows VTK's documentation.
 
 ```bash
 dotnet add package NetVtk

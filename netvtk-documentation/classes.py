@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SWIG_FILES = ROOT.parent / "netvtk-core" / "src" / "SWIG_files"
 OUT = ROOT / "classes"
-# nightly, which is 9.7: vtk.org/doc/release/<version>/html has 7.1, but no 8.2 or 9.x
+# nightly: vtk.org/doc/release/<version>/html has 7.1, but no 8.2 or 9.x
 REFERENCE = "https://vtk.org/doc/nightly/html/"
 
 # the operating systems of platforms.json, as .NET's RIDs name them
@@ -166,7 +166,7 @@ def main() -> None:
     (OUT / "index.md").write_text("\n".join([
         "# Class index", "",
         f"All {count} types NetVtk gives C#, in namespace `Vtk`, by VTK module and the native library that wraps it. "
-        f"Each links to its page in [VTK's reference]({REFERENCE}) (nightly: Kitware publishes no reference for 9.7 "
+        f"Each links to its page in [VTK's reference]({REFERENCE}) (nightly: Kitware publishes no reference for 9.x "
         "releases); C# keeps VTK's names, so the pages apply as they are. The typed arrays VTK declares from its "
         "array templates link their template's page.", "",
         *overview,

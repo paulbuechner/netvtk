@@ -3,7 +3,7 @@
 </div>
 
 <div align="center">
-  <p>The Visualization Toolkit (VTK) 9.7.1 for .NET: C# bindings generated from VTK's headers</p>
+  <p>The Visualization Toolkit (VTK) for .NET: C# bindings generated from VTK's headers</p>
 </div>
 
 <div align="center">
@@ -18,7 +18,7 @@
 <img alt="Documentation" src="https://img.shields.io/github/actions/workflow/status/paulbuechner/netvtk/docs.yml?branch=main&label=docs&style=for-the-badge">
 </a>
 <a href="https://vtk.org">
-<img alt="VTK" src="https://img.shields.io/badge/VTK-9.7.1-blue?style=for-the-badge">
+<img alt="VTK" src="https://img.shields.io/badge/built_on-VTK-blue?style=for-the-badge">
 </a>
 <a href="LICENSE">
 <img alt="License" src="https://img.shields.io/github/license/paulbuechner/netvtk?style=for-the-badge">
@@ -123,7 +123,7 @@ Building from source: [netvtk-core/README.md](netvtk-core/README.md), or the [bu
 
 ## Versions
 
-A version is the VTK version the bindings are generated for and NetVtk's revision: `9.7.1.2` is the second release for VTK 9.7.1. A release's tag (`v9.7.1.1`) is the commit to pin the vcpkg registry at. Changes per release: [netvtk-core/CHANGELOG.md](netvtk-core/CHANGELOG.md).
+A version is the VTK version the bindings are generated for and NetVtk's revision, `<VTK version>.<revision>`: revision 2 is the second release for that VTK version. A release's tag (`v<version>`) is the commit to pin the vcpkg registry at. Changes per release: [netvtk-core/CHANGELOG.md](netvtk-core/CHANGELOG.md).
 
 ## License
 

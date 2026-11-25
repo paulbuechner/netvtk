@@ -32,7 +32,7 @@ A SWIG binding of your own `%include`s `interop/NetVtkInterop.i`, not the typema
 
 The binding's native library compiles against VTK's headers but runs on the VTK libraries `NetVtk.runtime.<rid>` brings: build it against the same VTK. [NetVtk's repository](https://github.com/paulbuechner/netvtk) is a vcpkg registry of VTK's port (`versions/`); pinned at a NetVtk release's commit, with copies of `netvtk-core/vcpkg/triplets` and the features `netvtk-core/vcpkg.json` asks for, vcpkg builds the same VTK, with the same ABI hash, and either binary cache serves the other. The port's `opengl` feature is empty (OpenGL is always built), for manifests that ask for `vtk[opengl]`.
 
-The port writes the build's name into VTK's headers, `vtkNetVtkBuild.h`: VTK's version and its port-version, which counts NetVtk's patches (`9.7.1#1`). `%netvtk_build(NAME)` compiles it into the binding as the module class's static `NAME()`; the binding checks it against NetVtk's when it loads, and fails there rather than misbehave on another build:
+The port writes the build's name into VTK's headers, `vtkNetVtkBuild.h`: VTK's version and its port-version, which counts NetVtk's patches (`<VTK version>#<port-version>`). `%netvtk_build(NAME)` compiles it into the binding as the module class's static `NAME()`; the binding checks it against NetVtk's when it loads, and fails there rather than misbehave on another build:
 
 ```csharp
 [ModuleInitializer]

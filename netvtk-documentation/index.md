@@ -4,7 +4,7 @@ _layout: landing
 
 # NetVtk
 
-The [Visualization Toolkit](https://vtk.org) (VTK) 9.7.1 for .NET: C# bindings generated from VTK's headers, VTK's class and method names unchanged, in one namespace, `Vtk`. For simulation results: fields on meshes, isosurfaces, cuts, warps, scalar bars. One AnyCPU package for .NET Framework 3.5 and 4.5+, .NET 6, 8 and 10, and netstandard2.0, with natives for win-x64, win-x86, linux-x64 and osx-arm64.
+The [Visualization Toolkit](https://vtk.org) (VTK) for .NET: C# bindings generated from VTK's headers, VTK's class and method names unchanged, in one namespace, `Vtk`. For simulation results: fields on meshes, isosurfaces, cuts, warps, scalar bars. One AnyCPU package for .NET Framework 3.5 and 4.5+, .NET 6, 8 and 10, and netstandard2.0, with natives for win-x64, win-x86, linux-x64 and osx-arm64.
 
 ```bash
 dotnet add package NetVtk

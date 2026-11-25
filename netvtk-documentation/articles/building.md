@@ -19,7 +19,7 @@ Needs Python 3.10+, a vcpkg clone (`VCPKG_ROOT`), CMake with Ninja, the .NET 10 
 ```bash
 cd netvtk-core
 python build.py tools                        # SWIG from conda-forge into .tools/
-python build.py vtk --triplet x64-windows    # VTK 9.7.1 through vcpkg: about 25 minutes the first time
+python build.py vtk --triplet x64-windows    # VTK through vcpkg: about 25 minutes the first time
 python build.py generate                     # SWIG over the modules
 python build.py native --triplet x64-windows # the native libraries into artifacts/runtimes/win-x64/native
 python build.py test --arch x64              # every framework; --no-rendering without OpenGL

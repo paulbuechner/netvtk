@@ -23,7 +23,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 800 336" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="building-steps-title building-steps-desc">
         <title id="building-steps-title">netvtk-core's build steps</title>
-        <desc id="building-steps-desc">build.py's steps in order: tools installs SWIG, vtk builds VTK 9.7.1 through vcpkg, generate runs SWIG over the committed modules, native builds NetVtk's and VTK's libraries, then test on every framework and docs writes NetVtk.xml through netvtk-gen, and pack makes the .nupkg files; netvtk-gen generate writes the committed SWIG modules from VTK's install, only after a change to the generator or its configuration.</desc>
+        <desc id="building-steps-desc">build.py's steps in order: tools installs SWIG, vtk builds VTK through vcpkg, generate runs SWIG over the committed modules, native builds NetVtk's and VTK's libraries, then test on every framework and docs writes NetVtk.xml through netvtk-gen, and pack makes the .nupkg files; netvtk-gen generate writes the committed SWIG modules from VTK's install, only after a change to the generator or its configuration.</desc>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
         </defs>
@@ -76,7 +76,7 @@
         </g>
         <g font-family="'Geist Mono', monospace" font-size="9" fill="#4f5d75" text-anchor="middle">
           <text x="90" y="120">SWIG</text>
-          <text x="214" y="120">VTK 9.7.1</text>
+          <text x="214" y="120">VTK</text>
           <text x="214" y="132">via vcpkg</text>
           <text x="338" y="120">SWIG over</text>
           <text x="338" y="132">the modules</text>
