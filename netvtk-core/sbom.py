@@ -20,7 +20,7 @@ import sys
 import uuid
 from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 ROOT = Path(__file__).resolve().parent
 FILE = "sbom.cdx.json"
@@ -181,7 +181,8 @@ def vtk_components(source: Path, ids: dict[str, str]) -> dict[str, dict]:
     """By license folder, every module of VTK's sources that installs one: VTK's own modules as "vtk", the libraries it
     builds in (third-party modules, ThirdParty/ and Utilities/) under their own names, with what their declarations say."""
     components = {}
-    for module_file in sorted(source.rglob("vtk.module")):
+    # in Windows' order on every OS (case-insensitive), which the committed file has
+    for module_file in sorted(source.rglob("vtk.module"), key=PureWindowsPath):
         module = vtk_module_values(module_file.read_text(encoding="utf-8", errors="replace"))
         library = (module.get("LIBRARY_NAME") or [module["NAME"][0].replace("VTK::", "vtk")])[0]
         place = module_file.parent.relative_to(source).parts[0]
