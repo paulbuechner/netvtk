@@ -1,5 +1,5 @@
 {
-  "vtk": "9.7.1",
+  "vtk": "9.7.2",
   "folders": {
     "vtkAcceleratorsVTKmCore": {
       "name": "vtk",

@@ -7,7 +7,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO Kitware/VTK
     REF "v${VERSION}"
-    SHA512 749f230c9afb7479ff4f7ac606f630ee5ff725df0dfd360df153aede579737b19bb5bef2a6747c955a08c942997bb08636c1dd7282309677e9f4477616ded63a
+    SHA512 81f44fb811d76dd1c3871866441e58fda7b02fa572126e92e935f895184fbab6cff8169bd8a9756591bb1a224ebfb143924a110dc81861705093ee7d7426bbeb
     HEAD_REF master
     PATCHES
         0001-dx-render-window-makes-its-context-current.patch

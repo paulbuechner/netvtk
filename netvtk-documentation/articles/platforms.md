@@ -54,9 +54,9 @@ Rendering needs OpenGL 3.2; [reverse Z](rendering.md#reverse-z) 4.5 or `ARB_clip
 
 | Package | Size |
 |---|---|
-| `NetVtk`: eight assemblies, one per framework, with VTK's documentation for IntelliSense, and the SWIG files | 31.7 MB |
-| `NetVtk.runtime.win-x64`: 77 VTK libraries, NetVtk's seven, the notices | 29.5 MB |
-| `NetVtk.runtime.win-x86` | 30.0 MB |
+| `NetVtk`: eight assemblies, one per framework, with VTK's documentation for IntelliSense, and the SWIG files | 31.9 MB |
+| `NetVtk.runtime.win-x64`: 77 VTK libraries, NetVtk's seven, the notices | 29.7 MB |
+| `NetVtk.runtime.win-x86` | 27.4 MB |
 | `NetVtk.runtime.linux-x64` | 76.7 MB |
 
-Measured on a local pack of 9.7.1.1; nuget.org takes packages up to 250 MB.
+Measured on local packs, linux-x64 of 9.7.1.1, the others of 9.7.2.1; nuget.org takes packages up to 250 MB.

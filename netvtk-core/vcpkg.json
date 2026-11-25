@@ -10,6 +10,6 @@
     }
   ],
   "overrides": [
-    { "name": "vtk", "version": "9.7.1" }
+    { "name": "vtk", "version": "9.7.2" }
   ]
 }
