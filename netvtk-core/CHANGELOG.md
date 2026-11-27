@@ -3,6 +3,12 @@
 Notable changes to the NetVtk packages (`NetVtk`, `NetVtk.runtime.<rid>`), in the format of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A version is the VTK version the bindings wrap and NetVtk's revision: `9.7.1.2` is the second release for VTK 9.7.1.
 
 Changes wait in `changes/`, a file each (`python build.py change added "..."`), until the release PR writes them here (`python build.py release`). Each release's section becomes its GitHub release notes and the packages' release notes.
+## [9.7.2.1-next.1] - 2026-11-25
+
+### Changed
+
+- NetVtk wraps VTK 9.7.2, VTK's patch release, with its fixes in the modules NetVtk has: among them `vtkXMLMultiBlockDataReader` reads unindexed and nested blocks, `vtkImagePlaneWidget` reports the slice position of an origin below 0, a `vtkColorTransferFunction` on a log scale says so (`UsingLogScale()`), and Windows' interactor counts a held key's repeats. `Vtk.VtkBuild.Current` is `9.7.2#0`: a binding built on NetVtk's VTK 9.7.1 headers is rebuilt on these.
+
 ## [9.7.1.1] - 2026-11-25
 
 ### Added
@@ -82,6 +88,7 @@ Changes wait in `changes/`, a file each (`python build.py change added "..."`), 
 
 - NetVtk: C# bindings for VTK 9.7.1, generated from VTK's headers: 25 modules (data model, execution model, core, general, geometry, modeling and source filters, legacy, XML and Exodus II readers and writers, a CGNS reader, OpenGL rendering, volume rendering, annotation, interaction), VTK's names in the namespace Vtk, natives for win-x64, win-x86, linux-x64 and osx-arm64, .NET Framework 3.5+, .NET 6+ and netstandard2.0. Typed arrays copy in bulk (FromArray, ToArray, CopyFrom, AsSpan); C# handlers and events observe VTK's events; VtkOutput takes VTK's messages; native pointers in both directions; VTK's documentation comments in IntelliSense; the SWIG interface files ship in swig/, with NetVtkInterop.i for other SWIG bindings.
 
+[9.7.2.1-next.1]: https://github.com/paulbuechner/netvtk/releases/tag/v9.7.2.1-next.1
 [9.7.1.1]: https://github.com/paulbuechner/netvtk/releases/tag/v9.7.1.1
 [9.7.1.1-next.5]: https://github.com/paulbuechner/netvtk/releases/tag/v9.7.1.1-next.5
 [9.7.1.1-next.4]: https://github.com/paulbuechner/netvtk/releases/tag/v9.7.1.1-next.4
